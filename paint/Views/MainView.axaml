@@ -1,0 +1,118 @@
+<UserControl
+    x:Class="paint.Views.MainView"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:i="clr-namespace:Avalonia.Interactivity;assembly=Avalonia.Interactivity"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:vm="clr-namespace:paint.ViewModels"
+    x:DataType="vm:MainViewModel"
+    mc:Ignorable="d">
+
+    <Grid ColumnDefinitions="Auto,*">
+        <Grid RowDefinitions="Auto,*">
+
+            <Canvas
+                Name="DrawCanvas"
+                Grid.Row="0"
+                Width="700"
+                Height="400"
+                Background="White"
+                PointerPressed="Plane_PointerPressed"
+                PointerReleased="Plane_PointerReleased" />
+            <Grid
+                Grid.Row="1"
+                Background="rgb(42, 42, 42)"
+                ColumnDefinitions="auto,auto,auto,auto,auto"
+                RowDefinitions="*,auto,auto,*">
+                <TextBlock
+                    Grid.Row="1"
+                    Grid.Column="0"
+                    Width="170"
+                    Margin="10,0,0,0"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Top"
+                    Foreground="LightGray"
+                    Text="{Binding Count, StringFormat='Tiles Created: {0}'}" />
+                <TextBlock
+                    Grid.Row="2"
+                    Grid.Column="0"
+                    Width="220"
+                    Margin="10,0,0,0"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Bottom"
+                    Foreground="LightGray"
+                    Text="{Binding Pos, StringFormat='Mouse Position: {0}'}" />
+                <TextBlock
+                    Grid.Row="1"
+                    Grid.Column="1"
+                    Width="220"
+                    Margin="10,0,0,0"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Bottom"
+                    Foreground="LightGray"
+                    Text="{Binding Steps, StringFormat='Hitory Steps: {0}'}" />
+            </Grid>
+
+        </Grid>
+        <Grid
+            Grid.Column="1"
+            Background="rgb(42, 42, 42)"
+            RowDefinitions="auto,auto,auto,auto,auto,auto,auto">
+
+            <Button
+                Margin="0,10,0,0"
+                HorizontalAlignment="Center"
+                Command="{Binding Undo}"
+                Content="Undo"
+                Foreground="LightGray"
+                IsEnabled="{Binding IsUndoOn}" />
+            <Button
+                Grid.Row="1"
+                Margin="0,0,0,0"
+                HorizontalAlignment="Center"
+                Command="{Binding Redo}"
+                Content="Redo"
+                Foreground="LightGray"
+                IsEnabled="{Binding IsRedoOn}" />
+            <TextBlock
+                Grid.Row="2"
+                Margin="0,10,0,0"
+                HorizontalAlignment="Center"
+                Text="Size:" />
+            <TextBox
+                Name="SizeTextBox"
+                Grid.Row="3"
+                Width="50"
+                Height="30"
+                MinWidth="0"
+                MinHeight="0"
+                Margin="0,0,0,0"
+                HorizontalAlignment="Center"
+                Foreground="LightGray"
+                Text="{Binding Size, Mode=TwoWay}"
+                TextAlignment="Center" />
+            <TextBlock
+                Grid.Row="4"
+                Margin="0,10,0,0"
+                HorizontalAlignment="Center"
+                Text="Density:" />
+            <TextBox
+                Name="DensityTextBox"
+                Grid.Row="5"
+                Width="50"
+                Height="30"
+                MinWidth="0"
+                MinHeight="0"
+                Margin="0,0,0,0"
+                HorizontalAlignment="Center"
+                Foreground="LightGray"
+                Text="{Binding DrawDistance, Mode=TwoWay}"
+                TextAlignment="Center" />
+            <ColorPicker
+                Grid.Row="6"
+                Margin="0,20,0,0"
+                Color="{Binding BColor}" />
+        </Grid>
+    </Grid>
+</UserControl>
