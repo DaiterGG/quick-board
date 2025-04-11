@@ -1,12 +1,11 @@
-use std::any::Any;
-
 // potential change to
-// Style<T: DisplayType>
+// display_data: Box<dyn Any>,
+// Style<T: DisplayType>,
 // or with duplicate Style {display_absolute, display_block}
-pub struct Style {
-    display_data: Box<dyn Any>,
+trait DisplayType {}
+pub struct Style<T: DisplayType> {
+    display_data: T,
 }
-trait DisplayType: Any {}
 
 impl DisplayType for DisplayAbsolute {}
 struct DisplayAbsolute {
@@ -35,66 +34,69 @@ enum Direction {
     Vertical,
 }
 
-struct StyleBuilder {
-    style: Option<Style>,
+struct StyleBuilder<T: DisplayType> {
+    style: &mut Style<T>,
 }
-impl StyleBuilder {
-    fn new() -> StyleBuilder {
-        StyleBuilder { style: None }
-    }
-    pub fn type_absolute(&mut self) -> &mut StyleBuilder {
-        let style = &mut self.style;
-        assert!(style.is_some(), "StyleBuilder already has display type");
-        *style = Some(Style {
-            display_data: Box::new(DisplayAbsolute {
-                pivot: (0, 0),
-                align_horisontal: AlignRule::Center,
-                align_vertical: AlignRule::Center,
-                align_data: (0, 0),
-            }),
-        });
-        self
-    }
-    pub fn type_block(&mut self) -> &mut StyleBuilder {
-        let style = &mut self.style;
-        assert!(style.is_some(), "StyleBuilder already has display type");
-        *style = Some(Style {
-            display_data: Box::new(DisplayBlock {
-                align_direction: Direction::Horisontal,
-                align_data: 0,
-            }),
-        });
-        self
-    }
-    pub fn absolute_pivot(&mut self, x: i16, y: i16) -> &mut StyleBuilder {
-        assert!(self.style.is_none(), "StyleBuilder has no style");
-        let style = self.style.as_mut().unwrap();
-        match style.display_data.downcast_mut::<DisplayAbsolute>() {
-            Some(data) => {
-                data.pivot = (x, y);
-            }
-            None => {
-                panic!("Style is not absolute")
-            }
+impl StyleBuilder<DisplayAbsolute> {
+    fn new() -> StyleBuilder<DisplayAbsolute> {
+        StyleBuilder {
+            style: Style::<DisplayAbsolute> {
+                display_data: DisplayAbsolute {
+                    pivot: (0, 0),
+                    align_horisontal: AlignRule::Center,
+                    align_vertical: AlignRule::Center,
+                    align_data: (0, 0),
+                },
+            },
         }
+    }
+    pub fn pivot(&mut self, x: i16, y: i16) -> &mut StyleBuilder<DisplayAbsolute> {
+        self.style.display_data.pivot = (x, y);
         self
     }
-    pub fn absolute_align(&mut self, align_horisontal: AlignRule, align_vertical: AlignRule) {
-        assert!(self.style.is_none(), "StyleBuilder has no style");
-        let style = self.style.as_mut().unwrap();
-        match style.display_data.downcast_mut::<DisplayAbsolute>() {
-            Some(data) => {
-                data.align_horisontal = align_horisontal;
-                data.align_vertical = align_vertical;
-            }
-            None => {
-                panic!("Style is not absolute")
-            }
+    pub fn absolute_align(
+        &mut self,
+        align_horisontal: AlignRule,
+        align_vertical: AlignRule,
+    ) -> &mut StyleBuilder<DisplayAbsolute> {
+        self.style.display_data.align_horisontal = align_horisontal;
+        self.style.display_data.align_vertical = align_vertical;
+        self
+    }
+    pub fn align_data(&mut self, x: i16, y: i16) -> &mut StyleBuilder<DisplayAbsolute> {
+        self.style.display_data.align_data = (x, y);
+        self
+    }
+}
+impl StyleBuilder<DisplayBlock> {
+    fn new() -> StyleBuilder<DisplayBlock> {
+        StyleBuilder {
+            style: Style::<DisplayBlock> {
+                display_data: DisplayBlock {
+                    align_direction: Direction::Horisontal,
+                    align_data: 0,
+                },
+            },
         }
+    }
+    pub fn align_data(&mut self, data: i16) -> &mut StyleBuilder<DisplayBlock> {
+        self.style.display_data.align_data = data;
+        self
+    }
+    pub fn align_horisontal(&mut self) -> &mut StyleBuilder<DisplayBlock> {
+        self.style.display_data.align_direction = Direction::Horisontal;
+        self
+    }
+    pub fn align_direction(&mut self) -> &mut StyleBuilder<DisplayBlock> {
+        self.style.display_data.align_direction = Direction::Vertical;
+        self
+    }
+    pub fn build(&self) -> &mut Style<DisplayBlock> {
+        &mut self.style
     }
 }
 
-impl Style {
+impl Style<DisplayAbsolute> {
     //  pub fn apply() -> {
 
     // }
