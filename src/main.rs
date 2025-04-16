@@ -1,54 +1,57 @@
 extern crate sdl2;
 
-mod div;
-mod style;
-mod transform;
+mod model;
+mod relay;
+mod view;
 
+use crate::view::{config::Config, ui_manager::UIManager};
 use sdl2::{
     event::Event,
     gfx::primitives::DrawRenderer,
     keyboard::Keycode,
     mouse::{MouseButton, MouseState},
     pixels::Color,
-    render::CanvasBuilder,
+    render::{BlendMode, Canvas, CanvasBuilder, TextureCreator},
+    video::{Window, WindowContext},
 };
 use std::time::Duration;
+use view::coords::XYWH;
 
-const SCREEN_WIDTH: u32 = 800;
-const SCREEN_HEIGHT: u32 = 600;
-const COLOR: Color = Color::RGB(0, 255, 255);
-const RADIUS: i16 = 10;
+const SCREEN_WIDTH: u32 = 500;
+const SCREEN_HEIGHT: u32 = 100;
+const COLOR: Color = Color::RGB(200, 200, 200);
+const RADIUS: i16 = 3;
+
+// TODO:'s
+// event file
+// event call ui_manager.pointer_moved() recursevly
+// event call cfg.update_window_size()
+// rename ctx to cfg
+//
 
 pub fn main() -> Result<(), String> {
-    let sdl_context = sdl2::init()?;
-    let video_subsystem = sdl_context.video()?;
-    let window = video_subsystem
-        .window("foo", SCREEN_WIDTH, SCREEN_HEIGHT)
-        .position_centered()
-        .opengl()
-        .build()
-        .map_err(|e| e.to_string())?;
+    let mut cfg = Config::init()?;
 
-    let mut event_pump = sdl_context.event_pump()?;
+    let t_creator: TextureCreator<WindowContext> = cfg.canvas.texture_creator();
 
-    let mut canvas = CanvasBuilder::new(window)
-        .build()
-        .map_err(|e| e.to_string())?;
+    let mut ui_manager = UIManager::new();
+    let ws = cfg.window_size();
+    ui_manager.update_pos(XYWH::new(0, 0, ws.w, ws.h), &cfg);
 
-    let t_creator = canvas.texture_creator();
+    // TODO: remove
     let mut draw_texture = t_creator
         .create_texture_target(
             t_creator.default_pixel_format(),
-            SCREEN_WIDTH,
-            SCREEN_HEIGHT,
+            SCREEN_WIDTH * 2,
+            SCREEN_HEIGHT * 2,
         )
         .unwrap();
-    // let color = Color::RGB(0, 255, 255);
+    draw_texture.set_blend_mode(BlendMode::Blend);
 
-    'running: loop {
-        // ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 240));
-        canvas.set_draw_color(Color::RGB(0, 0, 0));
-        canvas.clear();
+    'main_loop: loop {
+        let canvas = &mut cfg.canvas;
+        std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 240));
+
         let mouse_state = MouseState::new(&event_pump);
         let x = MouseState::x(&mouse_state) as i16;
         let y = MouseState::y(&mouse_state) as i16;
@@ -65,7 +68,10 @@ pub fn main() -> Result<(), String> {
                 | Event::KeyDown {
                     keycode: Some(Keycode::Escape),
                     ..
-                } => break 'running,
+                } => break 'main_loop,
+                Event::Display { display_event, .. } => {
+                    println!("{:?}", display_event);
+                }
 
                 Event::MouseButtonDown {
                     mouse_btn: MouseButton::Left,
@@ -77,7 +83,10 @@ pub fn main() -> Result<(), String> {
             }
         }
 
+        canvas.set_draw_color(Color::RGB(0, 0, 0));
+        canvas.clear();
         canvas.copy(&draw_texture, None, None).unwrap();
+        ui_manager.draw_to(canvas);
         canvas.circle(x, y, 20, Color::RGB(255, 0, 0)).unwrap();
         canvas.present();
     }
