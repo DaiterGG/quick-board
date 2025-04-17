@@ -4,11 +4,14 @@ use sdl2::{
     render::{Canvas, RenderTarget, Texture},
 };
 
-use super::{config::Config, coords::XYWH, div::Div, ui_builder::Id};
+use super::{
+    app::App, coords::XYWH, div::Div, states::States, style_map::StyleMap, ui_builder::Id,
+};
 
 pub trait UIElementTrait {
+    fn update_pos(&mut self, transform: XYWH, styles: &StyleMap, states: &mut States);
+    fn pointer_collision(&self, states: &mut States);
     fn draw_to<T: RenderTarget>(&mut self, canvas: &mut Canvas<T>);
-    fn update_pos(&mut self, transform: XYWH, ctx: &Config);
     fn get_id(&self) -> Id;
 }
 
@@ -17,15 +20,21 @@ pub enum UIElement {
     None,
 }
 impl UIElementTrait for UIElement {
-    fn draw_to<T: RenderTarget>(&mut self, canvas: &mut Canvas<T>) {
+    fn update_pos(&mut self, transform: XYWH, styles: &StyleMap, states: &mut States) {
         match self {
-            UIElement::Div(div) => div.draw_to(canvas),
+            UIElement::Div(div) => div.update_pos(transform, &styles, states),
             UIElement::None => (),
         }
     }
-    fn update_pos(&mut self, transform: XYWH, ctx: &Config) {
+    fn pointer_collision(&self, states: &mut States) {
         match self {
-            UIElement::Div(div) => div.update_pos(transform, ctx),
+            UIElement::Div(div) => div.pointer_collision(states),
+            UIElement::None => (),
+        }
+    }
+    fn draw_to<T: RenderTarget>(&mut self, canvas: &mut Canvas<T>) {
+        match self {
+            UIElement::Div(div) => div.draw_to(canvas),
             UIElement::None => (),
         }
     }

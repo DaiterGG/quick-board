@@ -1,8 +1,10 @@
 extern crate sdl2;
 
+use super::states::States;
+use super::style_map::StyleMap;
 use super::ui_builder::Id;
 use super::ui_element::{UIElement, UIElementTrait};
-use super::{config::Config, coords::XYWH, style::Style};
+use super::{coords::XYWH, style::Style};
 
 use sdl2::gfx::primitives::DrawRenderer;
 use sdl2::pixels::Color;
@@ -26,17 +28,17 @@ impl Div {
             childrens,
         }
     }
-    pub fn get_current_transform(&self) -> XYWH {
-        self.current_transform
-    }
     // pub fn add_child(&mut self, child: Div) {
     //     self.childrens.push(child);
     // }
 }
 impl UIElementTrait for Div {
-    fn update_pos(&mut self, transform: XYWH, ctx: &Config) {
+    fn update_pos(&mut self, transform: XYWH, styles: &StyleMap, states: &mut States) {
         self.current_transform = transform;
-        Style::fit_childrens(self.current_transform, &mut self.childrens, ctx);
+        Style::fit_childrens(self.current_transform, &mut self.childrens, styles, states);
+    }
+    fn pointer_collision(&self, states: &mut States) {
+        todo!()
     }
 
     fn draw_to<T: RenderTarget>(&mut self, canvas: &mut Canvas<T>) {
@@ -63,7 +65,7 @@ impl UIElementTrait for Div {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::view::{config::Config, style::Style};
+    use crate::view::{coords::WH, style::Style};
 
     #[test]
     pub fn fit() {
@@ -72,7 +74,12 @@ mod tests {
             UIElement::Div(Div::new(Id::ForTest1, None, Vec::new())),
             UIElement::Div(Div::new(Id::ForTest2, None, Vec::new())),
         ];
-        Style::fit_childrens(win, &mut childs, &Config::default());
+        Style::fit_childrens(
+            win,
+            &mut childs,
+            &StyleMap::new(vec![]),
+            &mut States::new(WH { w: 1000, h: 1000 }),
+        );
         let div1 = childs[0].unwrap_div();
         let div2 = childs[1].unwrap_div();
         assert_eq!(div1.current_transform.x, 0);

@@ -1,9 +1,6 @@
-use sdl2::{
-    pixels::Color,
-    render::{Canvas, RenderTarget, Texture},
-};
+use sdl2::pixels::Color;
 
-use super::{config::Config, coords::XYWH, div::Div, ui_element::UIElement};
+use super::{div::Div, ui_element::UIElement};
 
 #[derive(Clone, Copy)]
 /// unique name for each ui_element

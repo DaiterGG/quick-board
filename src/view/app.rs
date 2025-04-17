@@ -1,33 +1,37 @@
+use std::time::Duration;
+
+use crate::relay;
+use relay::action_pump::ActionPump;
+
 use sdl2::{
     EventPump, Sdl, VideoSubsystem,
-    render::{Canvas, CanvasBuilder},
-    video::{DisplayMode, Window},
+    pixels::Color,
+    render::{Canvas, CanvasBuilder, TextureCreator},
+    video::{DisplayMode, Window, WindowContext},
 };
 
-use super::{
-    coords::{WH, XY},
-    event_manager::EventManager,
-    style_map::StyleMap,
-};
+use super::{coords::WH, event_manager::EventManager, states::States, ui_manager::UIManager};
 
-/// sigleton object
+// NOTE:
 /// initialized on program start
-/// fetches cfg from file
-/// provides current ui configuration
-/// and api to change it
-/// handle writing to file
-pub struct Config {
-    custom_ui_scale: Option<i32>,
+/// has modules and states
+/// modules are called in order in a main loop
+/// each module can cange it's data, and any data of another module or state
+/// perfect module do not have any data and do not change other module's data
+/// at the end of the loop, states are .reset() to change frame dependent data
+pub struct App {
+    pub action: ActionPump,
+    pub states: States,
     pub canvas: Canvas<Window>,
-    event_manager: EventManager,
-    sdl: Sdl,
-    video_subsystem: VideoSubsystem,
-    biggest_possible_resolution: WH,
-    styles: StyleMap,
-    window_size: WH,
+    pub event_manager: EventManager,
+    pub ui_manager: UIManager,
+    pub sdl: Sdl,
+    pub t_creator: TextureCreator<WindowContext>,
+    pub video_subsystem: VideoSubsystem,
+    pub biggest_possible_resolution: WH,
 }
-impl Config {
-    pub fn init() -> Result<Config, String> {
+impl App {
+    pub fn init() -> Result<App, String> {
         // TODO: read from file
         // let saved_ctx = read_cfg();
         let sdl = sdl2::init()?;
@@ -43,9 +47,10 @@ impl Config {
                 WH { w: 1920, h: 1080 }
             };
 
+        let action = ActionPump::new();
         let window = video_subsystem
             .window("foo", window_size.w as u32, window_size.h as u32)
-            .maximized()
+            // .maximized()
             .position_centered()
             .resizable()
             .opengl()
@@ -59,32 +64,30 @@ impl Config {
             h: ws.1 as i32,
         };
 
+        let biggest_possible_resolution = Self::init_biggest_possible_display_res(&video_subsystem);
+
         let canvas: Canvas<Window> = CanvasBuilder::new(window)
             .build()
             .map_err(|e| e.to_string())?;
-        Ok(Config {
+        let t_creator: TextureCreator<WindowContext> = canvas.texture_creator();
+        let ui_manager = UIManager::new();
+        let states = States::new(window_size);
+
+        Ok(App {
+            action,
+            t_creator,
+            states,
+            biggest_possible_resolution,
             event_manager,
-            custom_ui_scale: None,
-            biggest_possible_resolution: Self::init_biggest_possible_display_res(&video_subsystem),
-            window_size,
-            styles: StyleMap::new_first(),
+            ui_manager,
             sdl,
             canvas,
             video_subsystem,
         })
     }
-    pub fn get_current_ui_scale(&self) -> i32 {
-        match self.custom_ui_scale {
-            Some(x) => x,
-            None => self.window_size().h / 1080,
-        }
-    }
     pub fn get_biggest_possible_resolution(&self) -> WH {
         self.biggest_possible_resolution
     }
-    // pub fn get_current_window_size(&self) -> XY {
-    //     self.window_size
-    // }
     pub fn update_biggest_possible_display_res(&mut self) {
         self.biggest_possible_resolution =
             Self::init_biggest_possible_display_res(&self.video_subsystem);
@@ -105,43 +108,32 @@ impl Config {
         }
         max_wh
     }
-    pub fn styles(&self) -> &StyleMap {
-        &self.styles
-    }
     pub fn sdl(&self) -> &Sdl {
         &self.sdl
     }
     pub fn video_subsystem(&self) -> &VideoSubsystem {
         &self.video_subsystem
     }
-    pub fn window_size(&self) -> WH {
-        self.window_size
-    }
-    pub fn resize_window(&mut self, ws: WH) {
-        // TODO: resize
-        self.window_size = ws;
-    }
 }
 
 /// for testing
-impl Default for Config {
+impl Default for App {
     fn default() -> Self {
         let sdl = sdl2::init().unwrap();
         let video_subsystem = sdl.video().unwrap();
+        let canvas = CanvasBuilder::new(video_subsystem.window("foo", 1920, 1080).build().unwrap())
+            .build()
+            .unwrap();
         Self {
+            states: States::new(WH { w: 1920, h: 1080 }),
+            action: ActionPump::new(),
+            ui_manager: UIManager::new(),
+            t_creator: canvas.texture_creator(),
             event_manager: EventManager::new(&sdl).unwrap(),
-            custom_ui_scale: None,
             sdl,
-            canvas: CanvasBuilder::new(video_subsystem.window("foo", 1920, 1080).build().unwrap())
-                .build()
-                .unwrap(),
             video_subsystem,
-            window_size: WH {
-                w: (1920.0 * 0.8) as i32,
-                h: 1000,
-            },
+            canvas,
             biggest_possible_resolution: WH { w: 1920, h: 1080 },
-            styles: StyleMap::default(),
         }
     }
 }

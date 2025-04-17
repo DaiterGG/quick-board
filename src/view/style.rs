@@ -1,7 +1,8 @@
 use std::i32;
 
-use super::config::Config;
 use super::coords::{WH, XY, XYWH};
+use super::states::States;
+use super::style_map::StyleMap;
 use super::ui_element::{UIElement, UIElementTrait};
 
 // potential alternatives
@@ -25,18 +26,15 @@ pub enum Style {
     None,
 }
 
-type Percent = i32;
-type Pixels = i32;
-
 #[derive(Copy, Clone)]
 pub enum AlignValue {
-    Absolute(Pixels),
-    Relative(Percent),
+    Absolute(i32),
+    Relative(i32),
 }
 impl AlignValue {
-    pub fn unwrap(&self, length: i32, ctx: &Config) -> i32 {
+    pub fn unwrap(&self, length: i32, ui_scale: f32) -> i32 {
         match self {
-            AlignValue::Absolute(pixels) => pixels * ctx.get_current_ui_scale(),
+            AlignValue::Absolute(pixels) => (*pixels as f32 * ui_scale) as i32,
             AlignValue::Relative(percent) => (length * *percent as i32) / 100,
         }
     }
@@ -72,20 +70,24 @@ impl Style {
         }
     }
 
-    pub fn fit_childrens(window_to_fit: XYWH, childrens: &mut Vec<UIElement>, ctx: &Config) {
+    pub fn fit_childrens(
+        window_to_fit: XYWH,
+        childrens: &mut Vec<UIElement>,
+        styles: &StyleMap,
+        states: &mut States,
+    ) {
         //after each child set in place, transform shrinks (for Block),
         //and next child is being applyed to a smaller window
         let mut dynamic_window = window_to_fit;
 
         for i in 0..childrens.len() {
-            let new_transfrom = ctx
-                .styles()
+            let new_transfrom = styles
                 .get(childrens[i].get_id())
-                .fit_self(&mut dynamic_window, ctx);
-            childrens[i].update_pos(new_transfrom, ctx);
+                .fit_self(&mut dynamic_window, states);
+            childrens[i].update_pos(new_transfrom, styles, states);
         }
     }
-    fn fit_self(&self, window_to_fit: &mut XYWH, ctx: &Config) -> XYWH {
+    fn fit_self(&self, window_to_fit: &mut XYWH, states: &mut States) -> XYWH {
         return match &self {
             Style::Block {
                 direction,
@@ -93,7 +95,7 @@ impl Style {
                 length,
             } => {
                 //split window into 2 blocks
-                split_window(window_to_fit, length, *side, *direction, ctx)
+                split_window(window_to_fit, length, *side, *direction, states)
             }
             Style::Absolute {
                 pivot,
@@ -121,12 +123,12 @@ fn split_window(
     block_length: &AlignValue,
     align_side: AlignSide,
     align_direction: AlignDirection,
-    ctx: &Config,
+    states: &mut States,
 ) -> XYWH {
     let mut block_to_fit = window_to_split.clone();
     match align_direction {
         AlignDirection::Horisontal => {
-            let length = block_length.unwrap(window_to_split.w, ctx);
+            let length = block_length.unwrap(window_to_split.w, states.ui.get_current_ui_scale());
             block_to_fit.w = length;
             window_to_split.w -= length;
             match align_side {
@@ -139,7 +141,7 @@ fn split_window(
             }
         }
         AlignDirection::Vertical => {
-            let length = block_length.unwrap(window_to_split.h, ctx);
+            let length = block_length.unwrap(window_to_split.h, states.ui.get_current_ui_scale());
             block_to_fit.h = length;
             window_to_split.h -= length;
             match align_side {
@@ -157,6 +159,7 @@ fn split_window(
 
 #[cfg(test)]
 mod tests {
+
     use super::*;
     use proptest::prelude::*;
     proptest! {
@@ -172,7 +175,7 @@ mod tests {
                 AlignValue::Absolute(abs),
             );
             let mut window = XYWH::new(w_x, w_y, w_w, w_h);
-            let result = style.fit_self(&mut window, &Config::default());
+            let result = style.fit_self(&mut window,&mut States::default());
             assert_eq!(result.x, w_x);
             assert_eq!(result.y, w_y);
             assert_eq!(result.w, abs);
@@ -198,7 +201,7 @@ mod tests {
                 AlignValue::Relative(abs),
             );
             let mut window = XYWH::new(w_x, w_y, w_w, w_h);
-            let result = style.fit_self(&mut window, &Config::default());
+            let result = style.fit_self(&mut window,&mut States::default());
             let abs_to_px = (w_h * abs) / 100;
             assert_eq!(result.x, w_x);
             assert_eq!(result.y, w_y + (w_h - abs_to_px));
