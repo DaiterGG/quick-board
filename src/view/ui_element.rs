@@ -5,55 +5,91 @@ use sdl2::{
 };
 
 use super::{
-    app::App, coords::XYWH, div::Div, states::States, style_map::StyleMap, ui_builder::Id,
+    app::App, coords::XYWH, div::Div, states::States, style_align::Align, style_map::StyleMap,
+    ui_builder::Id,
 };
 
+/// element specific functions
 pub trait UIElementTrait {
-    fn update_pos(&mut self, transform: XYWH, styles: &StyleMap, states: &mut States);
     fn pointer_collision(&self, states: &mut States);
-    fn draw_to<T: RenderTarget>(&mut self, canvas: &mut Canvas<T>);
-    fn get_id(&self) -> Id;
 }
 
-pub enum UIElement {
-    Div(Div),
-    None,
+pub struct UIElement {
+    pub id: Id,
+    pub childrens: Vec<UIElement>,
+    pub transform: XYWH,
+    pub element: ElementType,
+}
+pub enum ElementType {
+    Div,
+}
+impl UIElement {
+    pub fn new(id: Id, element: ElementType, childrens: Vec<UIElement>) -> Self {
+        Self {
+            id,
+            childrens,
+            element,
+            transform: XYWH::default(),
+        }
+    }
+    pub fn draw_to<T: RenderTarget>(&self, canvas: &mut Canvas<T>, styles: &StyleMap) {
+        let dis = styles.get_display(self.id);
+        dis.draw_back(self.transform, canvas);
+        for i in 0..self.childrens.len() {
+            self.childrens[i].draw_to(canvas, styles);
+        }
+        dis.draw_front(self.transform, canvas);
+    }
+    pub fn update_pos(&mut self, transform: XYWH, styles: &StyleMap, states: &mut States) {
+        self.transform = transform;
+        Align::fit_childrens(self.transform, &mut self.childrens, styles, states);
+    }
 }
 impl UIElementTrait for UIElement {
-    fn update_pos(&mut self, transform: XYWH, styles: &StyleMap, states: &mut States) {
-        match self {
-            UIElement::Div(div) => div.update_pos(transform, &styles, states),
-            UIElement::None => (),
-        }
-    }
     fn pointer_collision(&self, states: &mut States) {
-        match self {
-            UIElement::Div(div) => div.pointer_collision(states),
-            UIElement::None => (),
-        }
-    }
-    fn draw_to<T: RenderTarget>(&mut self, canvas: &mut Canvas<T>) {
-        match self {
-            UIElement::Div(div) => div.draw_to(canvas),
-            UIElement::None => (),
-        }
-    }
-    fn get_id(&self) -> Id {
-        match self {
-            UIElement::Div(div) => div.id,
-            UIElement::None => Id::MainDiv,
+        match &self.element {
+            _ => {}
+            ElementType::Div => {
+                for i in 0..self.childrens.len() {
+                    self.childrens[i].pointer_collision(states);
+                }
+            }
         }
     }
 }
+// #[cfg(test)]
+// impl UIElement {
+//     pub fn unwrap_div(&self) -> &Div {
+//         match &self.element {
+//             ElementType::Div(div) => div,
+//         }
+//     }
+// }
+#[cfg(test)]
+mod tests {
+    use crate::view::{
+        coords::{WH, XYWH},
+        style_align::Align,
+        style_map::StyleMap,
+        ui_builder::Id,
+        ui_element::ElementType,
+    };
 
-impl UIElement {
-    /// unsafe, for testing
-    pub fn unwrap_div(&self) -> &Div {
-        match self {
-            UIElement::Div(div) => div,
-            _ => {
-                panic!("failed to unwrap div");
-            }
-        }
+    use super::*;
+
+    #[test]
+    pub fn fit() {
+        let win = XYWH::new(0, 0, 1000, 1000);
+        let mut childs = vec![UIElement::new(Id::ForTest1, ElementType::Div, vec![])];
+        Align::fit_childrens(
+            win,
+            &mut childs,
+            &StyleMap::new(),
+            &mut States::new(WH { w: 1000, h: 1000 }),
+        );
+        assert_eq!(childs[0].transform.x, 0);
+        assert_eq!(childs[0].transform.w, 400);
+        assert_eq!(childs[1].transform.x, 400);
+        assert_eq!(childs[1].transform.w, 600);
     }
 }

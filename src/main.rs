@@ -7,6 +7,7 @@ mod view;
 use std::time::Duration;
 
 use crate::view::app::App;
+use relay::action_pump::ActionPump;
 use sdl2::{pixels::Color, render::TextureCreator, video::WindowContext};
 
 const SCREEN_WIDTH: u32 = 500;
@@ -37,36 +38,25 @@ pub fn main() -> Result<(), String> {
 
     let mut app = App::init()?;
 
-    let canvas = &mut app.canvas;
-
     'main: loop {
         // Get the input and updates from user
         let res = app.event_manager.handle_events(&mut app.states);
-        match res {
-            Ok(_) => Ok(()),
-            Err(e) => {
-                if e.contains("USER_QUIT") {
-                    break 'main;
-                } else {
-                    Err(e)
-                }
-            }
+        if let Err(e) = res {
+            // break 'main;
         }
 
         // Update the UI layout if nessesary
         app.ui_manager.update(&mut app.states);
 
         // Apply the actions, registered by the user
-        app.action.apply(app.states.action.actions);
+        ActionPump::apply(&mut app);
 
         // Draw the UI
-        canvas.set_draw_color(Color::RGB(0, 0, 0));
-        canvas.clear();
-        app.ui_manager.draw_ui(canvas);
-        canvas.present();
+        app.canvas.set_draw_color(Color::RGB(0, 0, 0));
+        app.canvas.clear();
+        app.ui_manager.draw_ui(&mut app.canvas);
+        app.canvas.present();
         std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 240));
         //reset all the states
     }
-
-    Ok(())
 }

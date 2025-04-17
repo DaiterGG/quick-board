@@ -1,82 +1,81 @@
 use super::{
-    style::{AlignDirection, AlignSide, AlignValue, Style},
-    ui_builder::{BlockId, Id},
+    style_align::{Align, AlignDirection, AlignSide, AlignValue},
+    style_display::Display,
+    ui_builder::Id,
 };
 
 const STYLES_COUNT: usize = 256;
 
-const DEFAULT_STYLES: [Style; STYLES_COUNT] = {
-    let mut s = [Style::None; STYLES_COUNT];
-    // style[Id::SomeName as usize] is better than = [style,other_style]
-    s[Id::MainDiv as usize] = Style::block(
-        AlignDirection::Horisontal,
-        AlignSide::Start,
-        AlignValue::Absolute(100),
-    );
-    s[Id::MainDivHeader as usize] = Style::block(
-        AlignDirection::Vertical,
-        AlignSide::Start,
-        AlignValue::Absolute(30),
-    );
-    s[Id::MainDivLeftPanel as usize] = Style::block(
-        AlignDirection::Horisontal,
-        AlignSide::Start,
-        AlignValue::Relative(30),
-    );
-    s[Id::MainDivRightPanel as usize] = Style::block(
-        AlignDirection::Horisontal,
-        AlignSide::End,
-        AlignValue::Relative(25),
-    );
-    s[Id::ForTest1 as usize] = Style::block(
-        AlignDirection::Horisontal,
-        AlignSide::Start,
-        AlignValue::Relative(40),
-    );
-    s[Id::ForTest2 as usize] = Style::block(
-        AlignDirection::Horisontal,
-        AlignSide::Start,
-        AlignValue::Relative(100),
-    );
-    s
-};
-
 pub struct StyleMap {
-    styles: [Style; STYLES_COUNT],
+    align: [Align; STYLES_COUNT],
+    display: [Display; STYLES_COUNT],
 }
 
 impl StyleMap {
-    pub fn new_first() -> Self {
+    pub fn new() -> Self {
+        let mut a = [Align::None; STYLES_COUNT];
+        let mut d = [Display::None; STYLES_COUNT];
+        // style[Id::SomeName as usize] is better than = [style,other_style]
+        a[Id::MainDiv as usize] = Align::block(
+            AlignDirection::Horisontal,
+            AlignSide::Start,
+            AlignValue::Absolute(100),
+        );
+        a[Id::MainDivHeader as usize] = Align::block(
+            AlignDirection::Vertical,
+            AlignSide::Start,
+            AlignValue::Absolute(30),
+        );
+        a[Id::MainDivLeftPanel as usize] = Align::block(
+            AlignDirection::Horisontal,
+            AlignSide::Start,
+            AlignValue::Relative(30),
+        );
+        a[Id::MainDivRightPanel as usize] = Align::block(
+            AlignDirection::Horisontal,
+            AlignSide::End,
+            AlignValue::Relative(25),
+        );
+        a[Id::ForTest1 as usize] = Align::block(
+            AlignDirection::Horisontal,
+            AlignSide::Start,
+            AlignValue::Relative(40),
+        );
+        a[Id::ForTest2 as usize] = Align::block(
+            AlignDirection::Horisontal,
+            AlignSide::Start,
+            AlignValue::Relative(100),
+        );
         Self {
-            styles: DEFAULT_STYLES,
+            align: a,
+            display: d,
         }
     }
-    pub fn new(custom_styles: Vec<Style>) -> Self {
-        let mut stl = StyleMap {
-            styles: DEFAULT_STYLES,
-        };
-        for i in 0..custom_styles.len() {
-            stl.styles[i] = custom_styles[i];
-        }
-        stl
+    pub fn get_align(&self, id: Id) -> Align {
+        self.align[id as usize]
     }
-    pub fn get(&self, id: Id) -> Style {
-        self.styles[id as usize]
+    pub fn get_align_with_index(&self, index: usize) -> Align {
+        self.align[index]
     }
-    pub fn get_with_index(&self, index: usize) -> Style {
-        self.styles[index]
+    pub fn overwrite_align_with_index(&mut self, style: Align, index: usize) {
+        self.align[index] = style;
     }
-    pub fn overwrite_with_index(&mut self, style: Style, index: usize) {
-        self.styles[index] = style;
+
+    pub fn get_display(&self, id: Id) -> Display {
+        self.display[id as usize]
+    }
+    pub fn get_display_with_index(&self, index: usize) -> Display {
+        self.display[index]
+    }
+    pub fn overwrite_display_with_index(&mut self, style: Display, index: usize) {
+        self.display[index] = style;
     }
 }
 
 ///for testing
 impl Default for StyleMap {
     fn default() -> Self {
-        Self {
-            styles: DEFAULT_STYLES,
-        }
+        Self::new()
     }
 }
 

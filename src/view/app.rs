@@ -20,7 +20,6 @@ use super::{coords::WH, event_manager::EventManager, states::States, ui_manager:
 /// perfect module do not have any data and do not change other module's data
 /// at the end of the loop, states are .reset() to change frame dependent data
 pub struct App {
-    pub action: ActionPump,
     pub states: States,
     pub canvas: Canvas<Window>,
     pub event_manager: EventManager,
@@ -47,7 +46,6 @@ impl App {
                 WH { w: 1920, h: 1080 }
             };
 
-        let action = ActionPump::new();
         let window = video_subsystem
             .window("foo", window_size.w as u32, window_size.h as u32)
             // .maximized()
@@ -74,7 +72,6 @@ impl App {
         let states = States::new(window_size);
 
         Ok(App {
-            action,
             t_creator,
             states,
             biggest_possible_resolution,
@@ -126,7 +123,6 @@ impl Default for App {
             .unwrap();
         Self {
             states: States::new(WH { w: 1920, h: 1080 }),
-            action: ActionPump::new(),
             ui_manager: UIManager::new(),
             t_creator: canvas.texture_creator(),
             event_manager: EventManager::new(&sdl).unwrap(),

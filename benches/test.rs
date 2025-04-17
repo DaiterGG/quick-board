@@ -341,6 +341,60 @@ fn get_res(c: &mut Criterion) -> Result<(), String> {
     Ok(())
 }
 
+const MAP_SIZE: usize = 10;
+struct Map {
+    map: [i32; MAP_SIZE],
+}
+impl Map {
+    fn new() -> Map {
+        let mut mp = [0; MAP_SIZE];
+        mp[0] = 32;
+        mp[1] = 63;
+        mp[2] = 32;
+        mp[3] = 63;
+        mp[4] = 32;
+        mp[5] = 63;
+        mp[6] = 32;
+        mp[7] = 63;
+        mp[8] = 32;
+        mp[9] = 63;
+        Map { map: mp }
+    }
+    fn get(&self, index: usize) -> i32 {
+        self.map[index]
+    }
+    fn set(&mut self, index: usize, val: i32) {
+        self.map[index] = val;
+    }
+    fn new_fast() -> Map {
+        Map {
+            map: [32, 63, 32, 63, 32, 63, 32, 63, 32, 63],
+        }
+    }
+    fn send(&mut self) {
+        //
+    }
+}
+fn get_map(c: &mut Criterion) -> Result<(), String> {
+    c.bench_function("get map", |b| {
+        b.iter(|| {
+            let mut map = Map::new();
+            map.get(black_box(5));
+            map.set(black_box(5), black_box(35));
+            black_box(map.send());
+        })
+    });
+    c.bench_function("get map fast", |b| {
+        b.iter(|| {
+            let mut map = Map::new_fast();
+            map.get(black_box(5));
+            map.set(black_box(5), black_box(35));
+            black_box(map.send());
+        })
+    });
+
+    Ok(())
+}
 // bigger canvases takes longer to create O(n * 0.02 + C), n - number of pixels (w*h), C = .45 ms
 // criterion_group!(benches, create_dif_canvases);
 
@@ -355,5 +409,7 @@ fn get_res(c: &mut Criterion) -> Result<(), String> {
 // criterion_group!(benches, texture_draw_cache_2);
 // criterion_group!(benches, texture_draw_cache_3);
 
-criterion_group!(benches, get_res);
+// criterion_group!(benches, get_res);
+
+criterion_group!(benches, get_map);
 criterion_main!(benches);

@@ -1,14 +1,15 @@
 use super::{
+    action_state::Action,
     coords::XYWH,
     states::States,
     style_map::StyleMap,
-    ui_builder::{BlockId, UIBuilder},
+    ui_builder::{BlockId, Id, UIBuilder},
     ui_element::{UIElement, UIElementTrait},
 };
 
 use sdl2::render::{Canvas, RenderTarget};
 
-/// layers: z-indexed, root elements
+/// layers: root elements, z-indexed
 pub struct UIManager {
     layers: Vec<UIElement>,
     styles: StyleMap,
@@ -20,11 +21,12 @@ impl UIManager {
         let main = UIBuilder::get(BlockId::MainLayout);
         Self {
             layers: vec![main],
-            styles: StyleMap::new_first(),
+            styles: StyleMap::new(),
         }
     }
 
     pub fn update(&mut self, states: &mut States) {
+        states.action.add(Action::ButtonPressed(Id::MainDiv));
         if states.ui.requires_update {
             let window_size = XYWH::new(0, 0, states.ui.window_size.w, states.ui.window_size.h);
             for i in (0..self.layers.len()).rev() {
@@ -41,9 +43,9 @@ impl UIManager {
             }
         }
     }
-    pub fn draw_ui<T: RenderTarget>(&mut self, canvas: &mut Canvas<T>) {
+    pub fn draw_ui<T: RenderTarget>(&mut self, canvas: &mut Canvas<T>, styles: &StyleMap) {
         for i in 0..self.layers.len() {
-            self.layers[i].draw_to(canvas);
+            self.layers[i].draw_to(canvas, styles);
         }
     }
 }

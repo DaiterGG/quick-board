@@ -43,3 +43,13 @@ impl XYWH {
         }
     }
 }
+impl Default for XYWH {
+    fn default() -> Self {
+        Self {
+            x: 0,
+            y: 0,
+            w: 0,
+            h: 0,
+        }
+    }
+}

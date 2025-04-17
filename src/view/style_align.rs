@@ -12,7 +12,7 @@ use super::ui_element::{UIElement, UIElementTrait};
 // pub struct Style(Type);
 
 #[derive(Copy, Clone)]
-pub enum Style {
+pub enum Align {
     Block {
         direction: AlignDirection,
         side: AlignSide,
@@ -53,16 +53,16 @@ pub enum AlignDirection {
     Horisontal,
     Vertical,
 }
-impl Style {
-    pub const fn block(direction: AlignDirection, side: AlignSide, length: AlignValue) -> Style {
-        Style::Block {
+impl Align {
+    pub const fn block(direction: AlignDirection, side: AlignSide, length: AlignValue) -> Align {
+        Align::Block {
             direction,
             side,
             length,
         }
     }
 
-    pub const fn absolute(pivot: XY, align_by: XY, size: WH) -> Style {
+    pub const fn absolute(pivot: XY, align_by: XY, size: WH) -> Align {
         Self::Absolute {
             pivot,
             align_by,
@@ -82,14 +82,14 @@ impl Style {
 
         for i in 0..childrens.len() {
             let new_transfrom = styles
-                .get(childrens[i].get_id())
+                .get(childrens[i].id())
                 .fit_self(&mut dynamic_window, states);
             childrens[i].update_pos(new_transfrom, styles, states);
         }
     }
-    fn fit_self(&self, window_to_fit: &mut XYWH, states: &mut States) -> XYWH {
+    pub fn fit_self(&self, window_to_fit: &mut XYWH, states: &mut States) -> XYWH {
         return match &self {
-            Style::Block {
+            Align::Block {
                 direction,
                 side,
                 length,
@@ -97,7 +97,7 @@ impl Style {
                 //split window into 2 blocks
                 split_window(window_to_fit, length, *side, *direction, states)
             }
-            Style::Absolute {
+            Align::Absolute {
                 pivot,
                 align_by,
                 size: absolute,
@@ -112,7 +112,7 @@ impl Style {
 
                 XYWH::new(new_x, new_y, absolute.w, absolute.h)
             }
-            Style::None => {
+            Align::None => {
                 panic!("DisplayType::None")
             }
         };
@@ -169,7 +169,7 @@ mod tests {
             w_h in 0i32..8000,
             w_x in 0i32..8000,
             w_y in 0i32..8000) {
-            let style = Style::block(
+            let style = Align::block(
                 AlignDirection::Horisontal,
                 AlignSide::Start,
                 AlignValue::Absolute(abs),
@@ -195,7 +195,7 @@ mod tests {
             w_h in 0i32..8000,
             w_x in 0i32..8000,
             w_y in 0i32..8000) {
-            let style = Style::block(
+            let style = Align::block(
                 AlignDirection::Vertical,
                 AlignSide::End,
                 AlignValue::Relative(abs),
