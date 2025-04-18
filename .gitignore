@@ -1,1 +1,7 @@
 /target
+/sdl2-sys
+/benches
+/dev
+*.bat
+*.dll
+*.lib
