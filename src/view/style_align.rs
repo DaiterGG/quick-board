@@ -3,7 +3,7 @@ use std::i32;
 use super::coords::{WH, XY, XYWH};
 use super::states::States;
 use super::style_map::StyleMap;
-use super::ui_element::{UIElement, UIElementTrait};
+use super::ui_element::UIElement;
 
 // potential alternatives
 // display_data: Box<dyn Any>, code overhead for casting types

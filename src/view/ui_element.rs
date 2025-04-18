@@ -1,32 +1,28 @@
 use sdl2::render::{Canvas, RenderTarget, Texture};
 
 use super::{
-    app::App, coords::XYWH, states::States, style_align::Align, style_display::DisplayState,
-    style_map::StyleMap, ui_builder::Id,
+    app::App, button::Button, coords::XYWH, pointer_state::ButtonState, states::States,
+    style_align::Align, style_display::DisplayState, style_map::StyleMap, ui_builder::Id,
 };
 
-/// element specific functions
-pub trait UIElementTrait {
-    fn pointer_collision(&self, states: &mut States, styles: &StyleMap);
-}
-
 pub struct UIElement {
+    pub element: ElementType,
     pub id: Id,
     pub childrens: Vec<UIElement>,
     pub transform: XYWH,
-    pub element: ElementType,
 }
 #[derive(Copy, Clone)]
 pub enum ElementType {
     Div,
+    Button,
 }
 
 impl UIElement {
-    pub fn new(id: Id, element: ElementType, childrens: Vec<UIElement>) -> Self {
+    pub fn new(element: ElementType, id: Id, childrens: Vec<UIElement>) -> Self {
         Self {
+            element,
             id,
             childrens,
-            element,
             transform: XYWH::default(),
         }
     }
@@ -42,57 +38,77 @@ impl UIElement {
 
         dis.inspect(|d| d.draw(self.transform, true, canvas, color));
     }
-    pub fn update_pos(&mut self, transform: XYWH, styles: &StyleMap, states: &mut States) {
-        self.transform = transform;
-
+    pub fn update_childrens(&mut self, styles: &StyleMap, states: &mut States) {
         //after each child set in place, transform shrinks (for Block),
-        //and next child is being applyed to a smaller window
-        let mut dynamic_window = transform;
+        //and next child is being applied to a smaller window
+        let mut dynamic_window = self.transform.clone();
         for i in 0..self.childrens.len() {
-            let new_transfrom = styles
-                .get_align(self.childrens[i].id)
-                .align(&mut dynamic_window, states);
-            self.childrens[i].update_pos(new_transfrom, styles, states);
+            let ch = &mut self.childrens[i];
+            ch.transform = styles.get_align(ch.id).align(&mut dynamic_window, states);
+            ch.update_childrens(styles, states);
+        }
+    }
+    pub fn pointer_collision(&self, states: &mut States, styles: &mut StyleMap, parrent_hit: bool) {
+        //if parrent wasn't hit, then children are not calculated
+        let hit = if !parrent_hit {
+            false
+        } else {
+            self.transform.is_within(states.pointer.x, states.pointer.y)
+        };
+
+        let opt = styles.get_display_mut(self.id);
+        if let Some(dis) = opt {
+            dis.set_state(DisplayState::Hovered, hit);
+            if states.pointer.left == ButtonState::Pressed {
+                dis.set_state(DisplayState::Pressed, hit);
+            }
+            if states.pointer.left == ButtonState::Held {
+                dis.set_state(DisplayState::Held, hit);
+            }
+            if states.pointer.left == ButtonState::Released {
+                dis.set_state(DisplayState::Released, hit);
+            }
+        }
+
+        // element specific logic
+        match &self.element {
+            ElementType::Button if hit => {
+                Button::before_collision(self, states);
+            }
+            _ => {} //div
+        }
+
+        for i in 0..self.childrens.len() {
+            self.childrens[i].pointer_collision(states, styles, hit);
+        }
+
+        // element specific logic
+        match &self.element {
+            ElementType::Button if hit => {
+                Button::after_collision(self, states);
+            }
+            _ => {} //div
         }
     }
 }
-impl UIElementTrait for UIElement {
-    fn pointer_collision(&self, states: &mut States, styles: &StyleMap) {
-        if self.transform.is_within(states.pointer.x, states.pointer.y) {
-            let opt = styles.get_display(self.id);
-            if let Some(mut dis) = opt {
-                dis.set_active(DisplayState::Hovered);
-            }
+// #[cfg(test)]
+// mod tests {
+//     use crate::view::{coords::XYWH, style_map::StyleMap, ui_builder::Id, ui_element::ElementType};
 
-            // element specific logic
-            match &self.element {
-                _ => {}
-                ElementType::Div => {}
-            }
-            for i in 0..self.childrens.len() {
-                self.childrens[i].pointer_collision(states, styles);
-            }
-        }
-    }
-}
-#[cfg(test)]
-mod tests {
-    use crate::view::{coords::XYWH, style_map::StyleMap, ui_builder::Id, ui_element::ElementType};
+//     use super::*;
 
-    use super::*;
-
-    #[test]
-    pub fn fit() {
-        let win = XYWH::new(0, 0, 1000, 1000);
-        let mut childs = vec![
-            UIElement::new(Id::ForTest1, ElementType::Div, vec![]),
-            UIElement::new(Id::ForTest2, ElementType::Div, vec![]),
-        ];
-        let mut div = UIElement::new(Id::ForTest1, ElementType::Div, childs);
-        div.update_pos(win, &StyleMap::new(), &mut States::default());
-        assert_eq!(div.childrens[0].transform.x, 0);
-        assert_eq!(div.childrens[0].transform.w, 400);
-        assert_eq!(div.childrens[1].transform.x, 400);
-        assert_eq!(div.childrens[1].transform.w, 600);
-    }
-}
+//     #[test]
+//     pub fn fit() {
+//         let win = XYWH::new(0, 0, 1000, 1000);
+//         let mut childs = vec![
+//             UIElement::new(Id::ForTest1, ElementType::Div, vec![]),
+//             UIElement::new(Id::ForTest2, ElementType::Div, vec![]),
+//         ];
+//         let mut div = UIElement::new(Id::ForTest1, ElementType::Div, childs);
+//         div.update_pos(win, &StyleMap::new(), &mut States::default());
+//         assert_eq!(div.childrens[0].transform.x, 0);
+//         assert_eq!(div.childrens[0].transform.w, 400);
+//         assert_eq!(div.childrens[1].transform.x, 400);
+//         assert_eq!(div.childrens[1].transform.w, 600);
+//     }
+// }

@@ -18,8 +18,13 @@ pub struct StyleMap {
 impl StyleMap {
     pub fn new() -> Self {
         let mut m = [(Align::None, None); STYLES_COUNT];
+        // root elements always absolute
         m[Id::MainDiv as usize] = (
-            Align::block(Direction::Horisontal, Side::Start, Value::Persent(100)),
+            Align::absolute(
+                XY::new(50, 50),
+                XY::new(50, 50),
+                (Value::Persent(100), Value::Persent(100)),
+            ),
             None,
         );
         m[Id::MainDivHeader as usize] = (
@@ -28,19 +33,14 @@ impl StyleMap {
         );
         m[Id::MainDivLeftPanel as usize] = (
             Align::block(Direction::Horisontal, Side::Start, Value::Pixels(50)),
-            // None,
             Some(Display::new(DisplayData::bg(ColorTag::Main))),
         );
         m[Id::SoftBorder1 as usize] = (
-            Align::absolute(
-                XY::new(50, 0),
-                XY::new(50, 0),
-                (Value::Persent(100), Value::Pixels(1)),
-            ),
+            Align::block(Direction::Vertical, Side::Start, Value::Pixels(20)),
             Some(Display::new(DisplayData::bg(ColorTag::MainDark))),
         );
         m[Id::LeftBody as usize] = (
-            Align::block(Direction::Horisontal, Side::End, Value::Persent(25)),
+            Align::block(Direction::Horisontal, Side::Start, Value::Persent(100)),
             None,
         );
         m[Id::MainDivRightPanel as usize] = (
@@ -48,6 +48,20 @@ impl StyleMap {
             None,
         );
 
+        m[Id::ButtonTest as usize] = (
+            Align::absolute(
+                XY::new(50, 50),
+                XY::new(50, 50),
+                (Value::Pixels(300), Value::Pixels(150)),
+            ),
+            Some(
+                *Display::new(DisplayData::bg(ColorTag::Main))
+                    .hovered(DisplayData::bg(ColorTag::SubHover))
+                    .pressed(DisplayData::bg(ColorTag::SubHover))
+                    .held(DisplayData::bg(ColorTag::SubClick))
+                    .released(DisplayData::bg(ColorTag::Main)),
+            ),
+        );
         m[Id::ForTest1 as usize] = (
             Align::block(Direction::Horisontal, Side::Start, Value::Persent(40)),
             None,
@@ -71,8 +85,11 @@ impl StyleMap {
         self.styles[index] = (align, display);
     }
 
-    pub fn get_display(&self, id: Id) -> Option<Display> {
-        self.styles[id as usize].1
+    pub fn get_display(&self, id: Id) -> &Option<Display> {
+        &self.styles[id as usize].1
+    }
+    pub fn get_display_mut(&mut self, id: Id) -> &mut Option<Display> {
+        &mut self.styles[id as usize].1
     }
     pub fn get_display_with_index(&self, index: usize) -> Option<Display> {
         self.styles[index].1

@@ -18,6 +18,8 @@ impl States {
     }
     pub fn reset(&mut self) {
         self.pointer.reset();
+        self.ui.reset();
+        self.action.reset();
     }
 }
 ///for testing

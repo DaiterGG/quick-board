@@ -2,7 +2,7 @@ use sdl2::pixels::Color;
 
 use super::ui_element::{ElementType, UIElement};
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 /// unique name for each ui_element
 pub enum Id {
     MainDiv,
@@ -11,6 +11,7 @@ pub enum Id {
     MainDivRightPanel,
     SoftBorder1,
     LeftBody,
+    ButtonTest,
     ForTest1,
     ForTest2,
 }
@@ -26,24 +27,25 @@ pub struct UIBuilder;
 impl UIBuilder {
     pub fn get(id: BlockId) -> UIElement {
         let div: ElementType = ElementType::Div;
+        let btn: ElementType = ElementType::Button;
         match id {
             BlockId::MainLayout => UIElement::new(
-                Id::MainDiv,
                 div,
+                Id::MainDiv,
                 vec![
-                    UIElement::new(Id::MainDivHeader, div, Vec::new()),
+                    UIElement::new(div, Id::MainDivHeader, Vec::new()),
                     UIElement::new(
-                        Id::MainDivLeftPanel,
                         div,
+                        Id::MainDivLeftPanel,
                         vec![
-                            UIElement::new(Id::SoftBorder1, div, Vec::new()),
-                            UIElement::new(Id::LeftBody, div, Vec::new()),
+                            UIElement::new(div, Id::SoftBorder1, Vec::new()),
+                            UIElement::new(div, Id::LeftBody, Vec::new()),
                         ],
                     ),
-                    // UIElement::new(Id::MainDivRightPanel, div, Vec::new()),
+                    UIElement::new(btn, Id::ButtonTest, Vec::new()),
                 ],
             ),
-            BlockId::ForTest1 => UIElement::new(Id::ForTest1, div, Vec::new()),
+            BlockId::ForTest1 => UIElement::new(div, Id::ForTest1, Vec::new()),
         }
     }
 }

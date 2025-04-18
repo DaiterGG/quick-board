@@ -39,8 +39,8 @@ impl App {
         let mut window_size =
             if let Ok(DisplayMode { w, h, .. }) = video_subsystem.display_mode(0, 0) {
                 WH {
-                    w: (w as f32 * 0.85) as i32,
-                    h: (h as f32 * 0.90) as i32,
+                    w: (w as f32 * 0.60) as i32,
+                    h: (h as f32 * 0.60) as i32,
                 }
             } else {
                 WH { w: 1920, h: 1080 }

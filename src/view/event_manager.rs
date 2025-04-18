@@ -34,17 +34,18 @@ impl EventManager {
                     ..
                 } => return Err("USER QUIT".to_owned()),
                 Event::Display { display_event, .. } => {
-                    println!("{:?}", display_event);
+                    // println!("{:?}", display_event);
                 }
                 Event::Window {
                     win_event: WindowEvent::Resized(w, h),
                     ..
                 } => {
                     ui.window_size = WH { w, h };
-                    ui.requires_update = true;
+                    ui.now_is_require_update();
                 }
 
                 Event::MouseMotion { x, y, .. } => {
+                    pntr.updated = true;
                     pntr.x = x;
                     pntr.y = y;
                 }
@@ -57,12 +58,15 @@ impl EventManager {
                         _ => {}
                     }
                 }
-                Event::MouseButtonUp { mouse_btn, .. } => match mouse_btn {
-                    MouseButton::Left => pntr.left = ButtonState::Released,
-                    MouseButton::Right => pntr.right = ButtonState::Released,
-                    MouseButton::Middle => pntr.middle = ButtonState::Released,
-                    _ => {}
-                },
+                Event::MouseButtonUp { mouse_btn, .. } => {
+                    pntr.updated = true;
+                    match mouse_btn {
+                        MouseButton::Left => pntr.left = ButtonState::Released,
+                        MouseButton::Right => pntr.right = ButtonState::Released,
+                        MouseButton::Middle => pntr.middle = ButtonState::Released,
+                        _ => {}
+                    }
+                }
                 _ => {}
             }
         }
