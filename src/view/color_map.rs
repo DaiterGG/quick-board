@@ -1,6 +1,6 @@
 use sdl2::pixels::Color;
 
-const COLOR_COUNT: usize = 7;
+const COLOR_COUNT: usize = 6;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum ColorTag {
@@ -9,8 +9,7 @@ pub enum ColorTag {
     MainLight,
     MainDark,
     Sub,
-    SubHover,
-    SubClick,
+    FlashClick,
 }
 pub struct ColorMap {
     colors: [Color; COLOR_COUNT],
@@ -23,8 +22,7 @@ impl ColorMap {
         c[ColorTag::Main as usize] = Color::RGB(31, 31, 31);
         c[ColorTag::MainLight as usize] = Color::RGB(36, 36, 36);
         c[ColorTag::Sub as usize] = Color::RGB(0, 159, 177);
-        c[ColorTag::SubHover as usize] = Color::RGBA(0, 159, 177, 30);
-        c[ColorTag::SubClick as usize] = Color::RGB(255, 255, 255);
+        c[ColorTag::FlashClick as usize] = Color::RGB(255, 255, 255);
         ColorMap { colors: c }
     }
     pub fn get(&self, tag: ColorTag) -> Color {

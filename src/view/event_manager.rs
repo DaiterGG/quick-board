@@ -60,6 +60,7 @@ impl EventManager {
                 }
                 Event::MouseButtonUp { mouse_btn, .. } => {
                     pntr.updated = true;
+                    println!("true");
                     match mouse_btn {
                         MouseButton::Left => pntr.left = ButtonState::Released,
                         MouseButton::Right => pntr.right = ButtonState::Released,

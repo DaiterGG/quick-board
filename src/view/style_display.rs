@@ -21,7 +21,7 @@ pub enum DisplayState {
     Held,
     Released,
 }
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 /// active_states: current element state
 /// states_data: constant settings
 pub struct Display {
@@ -75,6 +75,8 @@ impl Display {
         canvas: &mut Canvas<T>,
         colors: &ColorMap,
     ) {
+        // println!("{:?}", self.active_states);
+        // println!("{:?}", self.states_data);
         for i in 0..STATES_COUNT {
             if self.active_states[i] {
                 if let Some(data) = self.states_data[i] {
@@ -88,7 +90,7 @@ impl Display {
     }
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct DisplayData {
     draw_at_front: bool,
     color: ColorTag,
@@ -97,14 +99,14 @@ pub struct DisplayData {
     edge_radius: u8,
     border: Option<Border>,
 }
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 struct Border {
     color: ColorTag,
     width: u8,
 }
 impl DisplayData {
     /// for draw behind childrens
-    pub fn bg(color: ColorTag) -> Self {
+    pub fn new(color: ColorTag) -> Self {
         DisplayData {
             draw_at_front: false,
             color,
@@ -115,28 +117,26 @@ impl DisplayData {
         }
     }
     /// for draw on top of the childrens
-    pub fn front(color: ColorTag) -> Self {
-        let mut data = DisplayData::bg(color);
-        data.draw_at_front = true;
-        data
+    pub fn at_front(mut self) -> Self {
+        self.draw_at_front = true;
+        self
     }
-    pub fn sub(&mut self, sub: ColorTag, alfa: f32) -> &mut Self {
+    pub fn sub(mut self, sub: ColorTag, alfa: f32) -> Self {
         self.sub = Some(sub);
         self.sub_alfa = alfa;
         self
     }
-    pub fn border(&mut self, border: Border) -> &mut Self {
+    pub fn border(mut self, border: Border) -> Self {
         self.border = Some(border);
         self
     }
-    pub fn radius(&mut self, radius: u8) -> &mut Self {
+    pub fn radius(mut self, radius: u8) -> Self {
         self.edge_radius = radius;
         self
     }
     fn draw<T: RenderTarget>(&self, pos: XYWH, canvas: &mut Canvas<T>, colors: &ColorMap) {
         let color: Color = colors.get(self.color);
         canvas.set_draw_color(color);
-        canvas.set_blend_mode(sdl2::render::BlendMode::Blend);
         canvas.fill_rect(Rect::new(pos.x, pos.y, pos.w as u32, pos.h as u32));
 
         if let Some(sub) = self.sub {
@@ -144,6 +144,7 @@ impl DisplayData {
             sub.a = (sub.a as f32 * self.sub_alfa) as u8;
             canvas.set_draw_color(sub);
             canvas.set_blend_mode(sdl2::render::BlendMode::Blend);
+            canvas.fill_rect(Rect::new(pos.x, pos.y, pos.w as u32, pos.h as u32));
         }
         // canvas.rect(
         //     XYWH::new(pos.x, pos.y, pos.w, pos.h),

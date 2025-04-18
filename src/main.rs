@@ -45,7 +45,7 @@ pub fn main() -> Result<(), String> {
         // Draw the UI
         app.ui_manager.draw_ui(&mut app.canvas);
 
-        std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 240));
+        std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 30));
 
         //tell the data, that the frame is over
         app.states.reset();

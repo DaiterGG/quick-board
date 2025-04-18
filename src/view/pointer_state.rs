@@ -10,7 +10,7 @@ pub struct PointerState {
     pub right: ButtonState,
     pub interacting_with: Option<Id>,
 }
-#[derive(Copy, Clone, Eq, PartialEq)]
+#[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub enum ButtonState {
     Pressed, // on this frame
     Held,

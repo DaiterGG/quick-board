@@ -50,24 +50,26 @@ impl UIElement {
     }
     pub fn pointer_collision(&self, states: &mut States, styles: &mut StyleMap, parrent_hit: bool) {
         //if parrent wasn't hit, then children are not calculated
-        let hit = if !parrent_hit {
-            false
-        } else {
-            self.transform.is_within(states.pointer.x, states.pointer.y)
-        };
+        let hit = parrent_hit && self.transform.is_within(states.pointer.x, states.pointer.y);
 
         let opt = styles.get_display_mut(self.id);
+
         if let Some(dis) = opt {
             dis.set_state(DisplayState::Hovered, hit);
-            if states.pointer.left == ButtonState::Pressed {
-                dis.set_state(DisplayState::Pressed, hit);
-            }
-            if states.pointer.left == ButtonState::Held {
-                dis.set_state(DisplayState::Held, hit);
-            }
-            if states.pointer.left == ButtonState::Released {
-                dis.set_state(DisplayState::Released, hit);
-            }
+            dis.set_state(
+                DisplayState::Pressed,
+                states.pointer.left == ButtonState::Pressed && hit,
+            );
+            dis.set_state(
+                DisplayState::Held,
+                states.pointer.left == ButtonState::Held && hit,
+            );
+            dis.set_state(
+                DisplayState::Released,
+                states.pointer.left == ButtonState::Released && hit,
+            );
+            println!("{:?}", dis.active_states);
+            // println!("{:?}", states.pointer.left);
         }
 
         // element specific logic

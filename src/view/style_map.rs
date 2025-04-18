@@ -29,15 +29,15 @@ impl StyleMap {
         );
         m[Id::MainDivHeader as usize] = (
             Align::block(Direction::Vertical, Side::Start, Value::Pixels(50)),
-            Some(Display::new(DisplayData::bg(ColorTag::Main))),
+            Some(Display::new(DisplayData::new(ColorTag::Main))),
         );
         m[Id::MainDivLeftPanel as usize] = (
             Align::block(Direction::Horisontal, Side::Start, Value::Pixels(50)),
-            Some(Display::new(DisplayData::bg(ColorTag::Main))),
+            Some(Display::new(DisplayData::new(ColorTag::Main))),
         );
         m[Id::SoftBorder1 as usize] = (
             Align::block(Direction::Vertical, Side::Start, Value::Pixels(20)),
-            Some(Display::new(DisplayData::bg(ColorTag::MainDark))),
+            Some(Display::new(DisplayData::new(ColorTag::MainDark))),
         );
         m[Id::LeftBody as usize] = (
             Align::block(Direction::Horisontal, Side::Start, Value::Persent(100)),
@@ -52,14 +52,14 @@ impl StyleMap {
             Align::absolute(
                 XY::new(50, 50),
                 XY::new(50, 50),
-                (Value::Pixels(300), Value::Pixels(150)),
+                (Value::Persent(50), Value::Persent(50)),
             ),
             Some(
-                *Display::new(DisplayData::bg(ColorTag::Main))
-                    .hovered(DisplayData::bg(ColorTag::SubHover))
-                    .pressed(DisplayData::bg(ColorTag::SubHover))
-                    .held(DisplayData::bg(ColorTag::SubClick))
-                    .released(DisplayData::bg(ColorTag::Main)),
+                *Display::new(DisplayData::new(ColorTag::Main))
+                    .hovered(DisplayData::new(ColorTag::Main).sub(ColorTag::Sub, 0.1))
+                    .pressed(DisplayData::new(ColorTag::FlashClick))
+                    .held(DisplayData::new(ColorTag::Main).sub(ColorTag::Sub, 0.3))
+                    .released(DisplayData::new(ColorTag::FlashClick)),
             ),
         );
         m[Id::ForTest1 as usize] = (

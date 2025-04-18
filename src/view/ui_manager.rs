@@ -46,14 +46,16 @@ impl UIManager {
 
     /// called once per frame
     pub fn pointer_collision(&mut self, states: &mut States) {
-        if states.pointer.updated ||
-            // edge case, when ui updated under the pointer, but pointer was not moving
-            states.ui.was_updated_last_frame()
-        {
-            for i in 0..self.layers.len() {
-                self.layers[i].pointer_collision(states, &mut self.styles, true);
-            }
+        // NOTE: This if requires a bunch of maitenence,
+        // even for just one frame animations (Pressed -> Held)
+        // if states.pointer.updated ||
+        //     // edge case, when ui updated under the pointer, but pointer was not moving
+        //     states.ui.was_updated_last_frame()
+        // {
+        for i in 0..self.layers.len() {
+            self.layers[i].pointer_collision(states, &mut self.styles, true);
         }
+        // }
     }
 
     /// called once per frame

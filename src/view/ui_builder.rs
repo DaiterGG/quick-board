@@ -33,15 +33,15 @@ impl UIBuilder {
                 div,
                 Id::MainDiv,
                 vec![
-                    UIElement::new(div, Id::MainDivHeader, Vec::new()),
-                    UIElement::new(
-                        div,
-                        Id::MainDivLeftPanel,
-                        vec![
-                            UIElement::new(div, Id::SoftBorder1, Vec::new()),
-                            UIElement::new(div, Id::LeftBody, Vec::new()),
-                        ],
-                    ),
+                    // UIElement::new(div, Id::MainDivHeader, Vec::new()),
+                    // UIElement::new(
+                    //     div,
+                    //     Id::MainDivLeftPanel,
+                    //     vec![
+                    //         UIElement::new(div, Id::SoftBorder1, Vec::new()),
+                    //         UIElement::new(div, Id::LeftBody, Vec::new()),
+                    //     ],
+                    // ),
                     UIElement::new(btn, Id::ButtonTest, Vec::new()),
                 ],
             ),
