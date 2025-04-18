@@ -1,5 +1,6 @@
 use std::i32;
 
+use sdl2::pixels::Color;
 use sdl2::rect::Rect;
 use sdl2::render::{Canvas, RenderTarget};
 
@@ -7,36 +8,25 @@ use super::color_map::{ColorMap, ColorTag};
 use super::coords::{WH, XY, XYWH};
 use super::states::States;
 use super::style_map::StyleMap;
-use super::ui_element::{UIElement, UIElementTrait};
+use super::ui_element::UIElement;
 
 const STATES_COUNT: usize = 7;
+#[derive(Debug)]
 pub enum DisplayState {
     Idle,
-    Hovered,
-    Pressed,
-    Released,
-    Hield,
     Active,
     Disabled,
+    Hovered,
+    Pressed,
+    Held,
+    Released,
 }
 #[derive(Copy, Clone)]
 /// active_states: current element state
 /// states_data: constant settings
 pub struct Display {
-    active_states: [bool; STATES_COUNT],
+    pub active_states: [bool; STATES_COUNT],
     states_data: [Option<DisplayData>; STATES_COUNT],
-}
-#[derive(Copy, Clone)]
-pub struct DisplayData {
-    draw_at_front: bool,
-    color: ColorTag,
-    edge_radius: u8,
-    border: Option<Border>,
-}
-#[derive(Copy, Clone)]
-struct Border {
-    color: ColorTag,
-    width: u8,
 }
 
 impl Display {
@@ -71,12 +61,12 @@ impl Display {
         self.states_data[DisplayState::Released as usize] = Some(data);
         self
     }
-    pub fn hield(&mut self, data: DisplayData) -> &mut Self {
-        self.states_data[DisplayState::Hield as usize] = Some(data);
+    pub fn held(&mut self, data: DisplayData) -> &mut Self {
+        self.states_data[DisplayState::Held as usize] = Some(data);
         self
     }
-    pub fn set_active(&mut self, state: DisplayState) {
-        self.active_states[state as usize] = true;
+    pub fn set_state(&mut self, state: DisplayState, active: bool) {
+        self.active_states[state as usize] = active;
     }
     pub fn draw<T: RenderTarget>(
         &self,
@@ -97,14 +87,43 @@ impl Display {
         }
     }
 }
+
+#[derive(Copy, Clone)]
+pub struct DisplayData {
+    draw_at_front: bool,
+    color: ColorTag,
+    sub: Option<ColorTag>,
+    sub_alfa: f32,
+    edge_radius: u8,
+    border: Option<Border>,
+}
+#[derive(Copy, Clone)]
+struct Border {
+    color: ColorTag,
+    width: u8,
+}
 impl DisplayData {
+    /// for draw behind childrens
     pub fn bg(color: ColorTag) -> Self {
         DisplayData {
             draw_at_front: false,
             color,
+            sub: None,
+            sub_alfa: 0.0,
             edge_radius: 0,
             border: None,
         }
+    }
+    /// for draw on top of the childrens
+    pub fn front(color: ColorTag) -> Self {
+        let mut data = DisplayData::bg(color);
+        data.draw_at_front = true;
+        data
+    }
+    pub fn sub(&mut self, sub: ColorTag, alfa: f32) -> &mut Self {
+        self.sub = Some(sub);
+        self.sub_alfa = alfa;
+        self
     }
     pub fn border(&mut self, border: Border) -> &mut Self {
         self.border = Some(border);
@@ -115,9 +134,17 @@ impl DisplayData {
         self
     }
     fn draw<T: RenderTarget>(&self, pos: XYWH, canvas: &mut Canvas<T>, colors: &ColorMap) {
-        let color = colors.get(self.color);
+        let color: Color = colors.get(self.color);
         canvas.set_draw_color(color);
+        canvas.set_blend_mode(sdl2::render::BlendMode::Blend);
         canvas.fill_rect(Rect::new(pos.x, pos.y, pos.w as u32, pos.h as u32));
+
+        if let Some(sub) = self.sub {
+            let mut sub: Color = colors.get(sub);
+            sub.a = (sub.a as f32 * self.sub_alfa) as u8;
+            canvas.set_draw_color(sub);
+            canvas.set_blend_mode(sdl2::render::BlendMode::Blend);
+        }
         // canvas.rect(
         //     XYWH::new(pos.x, pos.y, pos.w, pos.h),
         //     border_color,

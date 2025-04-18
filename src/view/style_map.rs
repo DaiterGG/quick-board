@@ -41,7 +41,7 @@ impl StyleMap {
         );
         m[Id::LeftBody as usize] = (
             Align::block(Direction::Horisontal, Side::End, Value::Persent(25)),
-            Some(*Display::none().hovered(DisplayData::bg(ColorTag::MainDark))),
+            None,
         );
         m[Id::MainDivRightPanel as usize] = (
             Align::block(Direction::Horisontal, Side::End, Value::Persent(25)),
