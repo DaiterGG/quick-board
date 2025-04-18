@@ -39,13 +39,13 @@ impl UIManager {
     pub fn pointer_collision(&self, states: &mut States) {
         if states.pointer.updated {
             for i in 0..self.layers.len() {
-                self.layers[i].pointer_collision(states);
+                self.layers[i].pointer_collision(states, &self.styles);
             }
         }
     }
-    pub fn draw_ui<T: RenderTarget>(&mut self, canvas: &mut Canvas<T>, styles: &StyleMap) {
+    pub fn draw_ui<T: RenderTarget>(&mut self, canvas: &mut Canvas<T>) {
         for i in 0..self.layers.len() {
-            self.layers[i].draw_to(canvas, styles);
+            self.layers[i].draw_to(canvas, &self.styles);
         }
     }
 }

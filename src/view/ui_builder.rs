@@ -1,6 +1,6 @@
 use sdl2::pixels::Color;
 
-use super::{div::Div, ui_element::UIElement};
+use super::ui_element::{ElementType, UIElement};
 
 #[derive(Clone, Copy)]
 /// unique name for each ui_element
@@ -9,7 +9,8 @@ pub enum Id {
     MainDivHeader,
     MainDivLeftPanel,
     MainDivRightPanel,
-
+    SoftBorder1,
+    LeftBody,
     ForTest1,
     ForTest2,
 }
@@ -24,29 +25,25 @@ pub enum BlockId {
 pub struct UIBuilder;
 impl UIBuilder {
     pub fn get(id: BlockId) -> UIElement {
+        let div: ElementType = ElementType::Div;
         match id {
-            BlockId::MainLayout => UIElement::Div(Div::new(
+            BlockId::MainLayout => UIElement::new(
                 Id::MainDiv,
-                None,
+                div,
                 vec![
-                    UIElement::Div(Div::new(
-                        Id::MainDivHeader,
-                        Some(Color::RGB(255, 0, 0)),
-                        Vec::new(),
-                    )),
-                    UIElement::Div(Div::new(
+                    UIElement::new(Id::MainDivHeader, div, Vec::new()),
+                    UIElement::new(
                         Id::MainDivLeftPanel,
-                        Some(Color::RGB(0, 255, 0)),
-                        Vec::new(),
-                    )),
-                    UIElement::Div(Div::new(
-                        Id::MainDivRightPanel,
-                        Some(Color::RGB(0, 0, 255)),
-                        Vec::new(),
-                    )),
+                        div,
+                        vec![
+                            UIElement::new(Id::SoftBorder1, div, Vec::new()),
+                            UIElement::new(Id::LeftBody, div, Vec::new()),
+                        ],
+                    ),
+                    // UIElement::new(Id::MainDivRightPanel, div, Vec::new()),
                 ],
-            )),
-            BlockId::ForTest1 => UIElement::Div(Div::new(Id::ForTest1, None, Vec::new())),
+            ),
+            BlockId::ForTest1 => UIElement::new(Id::ForTest1, div, Vec::new()),
         }
     }
 }

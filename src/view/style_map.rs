@@ -1,74 +1,81 @@
 use super::{
-    style_align::{Align, AlignDirection, AlignSide, AlignValue},
-    style_display::Display,
+    color_map::{ColorMap, ColorTag},
+    coords::{WH, XY},
+    style_align::{Align, Direction, Side, Value},
+    style_display::{Display, DisplayData},
     ui_builder::Id,
 };
 
 const STYLES_COUNT: usize = 256;
 
 pub struct StyleMap {
-    align: [Align; STYLES_COUNT],
-    display: [Display; STYLES_COUNT],
+    // used separately, but defined here, for convienience
+    styles: [(Align, Option<Display>); STYLES_COUNT],
+
+    pub colors: ColorMap,
 }
 
 impl StyleMap {
     pub fn new() -> Self {
-        let mut a = [Align::None; STYLES_COUNT];
-        let mut d = [Display::None; STYLES_COUNT];
-        // style[Id::SomeName as usize] is better than = [style,other_style]
-        a[Id::MainDiv as usize] = Align::block(
-            AlignDirection::Horisontal,
-            AlignSide::Start,
-            AlignValue::Absolute(100),
+        let mut m = [(Align::None, None); STYLES_COUNT];
+        m[Id::MainDiv as usize] = (
+            Align::block(Direction::Horisontal, Side::Start, Value::Persent(100)),
+            None,
         );
-        a[Id::MainDivHeader as usize] = Align::block(
-            AlignDirection::Vertical,
-            AlignSide::Start,
-            AlignValue::Absolute(30),
+        m[Id::MainDivHeader as usize] = (
+            Align::block(Direction::Vertical, Side::Start, Value::Pixels(50)),
+            Some(Display::new(DisplayData::bg(ColorTag::Main))),
         );
-        a[Id::MainDivLeftPanel as usize] = Align::block(
-            AlignDirection::Horisontal,
-            AlignSide::Start,
-            AlignValue::Relative(30),
+        m[Id::MainDivLeftPanel as usize] = (
+            Align::block(Direction::Horisontal, Side::Start, Value::Pixels(50)),
+            // None,
+            Some(Display::new(DisplayData::bg(ColorTag::Main))),
         );
-        a[Id::MainDivRightPanel as usize] = Align::block(
-            AlignDirection::Horisontal,
-            AlignSide::End,
-            AlignValue::Relative(25),
+        m[Id::SoftBorder1 as usize] = (
+            Align::absolute(
+                XY::new(50, 0),
+                XY::new(50, 0),
+                (Value::Persent(100), Value::Pixels(1)),
+            ),
+            Some(Display::new(DisplayData::bg(ColorTag::MainDark))),
         );
-        a[Id::ForTest1 as usize] = Align::block(
-            AlignDirection::Horisontal,
-            AlignSide::Start,
-            AlignValue::Relative(40),
+        m[Id::LeftBody as usize] = (
+            Align::block(Direction::Horisontal, Side::End, Value::Persent(25)),
+            Some(*Display::none().hovered(DisplayData::bg(ColorTag::MainDark))),
         );
-        a[Id::ForTest2 as usize] = Align::block(
-            AlignDirection::Horisontal,
-            AlignSide::Start,
-            AlignValue::Relative(100),
+        m[Id::MainDivRightPanel as usize] = (
+            Align::block(Direction::Horisontal, Side::End, Value::Persent(25)),
+            None,
+        );
+
+        m[Id::ForTest1 as usize] = (
+            Align::block(Direction::Horisontal, Side::Start, Value::Persent(40)),
+            None,
+        );
+        m[Id::ForTest2 as usize] = (
+            Align::block(Direction::Horisontal, Side::Start, Value::Persent(100)),
+            None,
         );
         Self {
-            align: a,
-            display: d,
+            styles: m,
+            colors: ColorMap::new(),
         }
     }
     pub fn get_align(&self, id: Id) -> Align {
-        self.align[id as usize]
+        self.styles[id as usize].0
     }
     pub fn get_align_with_index(&self, index: usize) -> Align {
-        self.align[index]
+        self.styles[index].0
     }
-    pub fn overwrite_align_with_index(&mut self, style: Align, index: usize) {
-        self.align[index] = style;
+    pub fn overwrite_with_index(&mut self, align: Align, display: Option<Display>, index: usize) {
+        self.styles[index] = (align, display);
     }
 
-    pub fn get_display(&self, id: Id) -> Display {
-        self.display[id as usize]
+    pub fn get_display(&self, id: Id) -> Option<Display> {
+        self.styles[id as usize].1
     }
-    pub fn get_display_with_index(&self, index: usize) -> Display {
-        self.display[index]
-    }
-    pub fn overwrite_display_with_index(&mut self, style: Display, index: usize) {
-        self.display[index] = style;
+    pub fn get_display_with_index(&self, index: usize) -> Option<Display> {
+        self.styles[index].1
     }
 }
 

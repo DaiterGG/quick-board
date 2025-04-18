@@ -3,13 +3,23 @@ pub struct WH {
     pub w: i32,
     pub h: i32,
 }
+impl WH {
+    pub fn new(w: i32, h: i32) -> Self {
+        WH { w, h }
+    }
+}
 #[derive(Copy, Clone)]
 pub struct XY {
     pub x: i32,
     pub y: i32,
 }
+impl XY {
+    pub fn new(x: i32, y: i32) -> Self {
+        XY { x, y }
+    }
+}
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 /// x, y - left top corner
 pub struct XYWH {
     pub x: i32,
@@ -41,6 +51,9 @@ impl XYWH {
         } else {
             self.h -= length;
         }
+    }
+    pub fn is_within(&self, x: i32, y: i32) -> bool {
+        x >= self.x && x < self.x + self.w && y >= self.y && y < self.y + self.h
     }
 }
 impl Default for XYWH {

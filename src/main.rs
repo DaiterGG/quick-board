@@ -15,12 +15,6 @@ const SCREEN_HEIGHT: u32 = 100;
 const COLOR: Color = Color::RGB(200, 200, 200);
 const RADIUS: i16 = 3;
 
-// TODO:'s
-// event file
-// event call ui_manager.pointer_moved() recursevly
-// event call ctx.update_window_size()
-//
-
 pub fn main() -> Result<(), String> {
     // let t_creator: TextureCreator<WindowContext> = app.canvas.texture_creator();
 
@@ -42,14 +36,17 @@ pub fn main() -> Result<(), String> {
         // Get the input and updates from user
         let res = app.event_manager.handle_events(&mut app.states);
         if let Err(e) = res {
-            // break 'main;
+            break 'main;
         }
 
-        // Update the UI layout if nessesary
-        app.ui_manager.update(&mut app.states);
+        // Check if user triggered some ui events
+        app.ui_manager.pointer_collision(&mut app.states);
 
         // Apply the actions, registered by the user
         ActionPump::apply(&mut app);
+
+        // Update the UI layout if nessesary
+        app.ui_manager.update(&mut app.states);
 
         // Draw the UI
         app.canvas.set_draw_color(Color::RGB(0, 0, 0));
@@ -57,6 +54,9 @@ pub fn main() -> Result<(), String> {
         app.ui_manager.draw_ui(&mut app.canvas);
         app.canvas.present();
         std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 240));
+
         //reset all the states
+        app.states.reset();
     }
+    Ok(())
 }

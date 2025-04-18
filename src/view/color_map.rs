@@ -1,5 +1,8 @@
+use sdl2::pixels::Color;
+
 const COLOR_COUNT: usize = 256;
 
+#[derive(Copy, Clone)]
 pub enum ColorTag {
     Deep,
     Main,
@@ -11,11 +14,11 @@ pub struct ColorMap {
 }
 impl ColorMap {
     pub fn new() -> ColorMap {
-        let mut c = [Color::bl(); COLOR_COUNT];
-        c[ColorTag::Deep as usize] = Color::new(0, 0, 0);
-        c[ColorTag::Main as usize] = Color::new(255, 255, 255);
-        c[ColorTag::MainLight as usize] = Color::new(255, 255, 255);
-        c[ColorTag::MainDark as usize] = Color::new(255, 255, 255);
+        let mut c = [Color::RGB(0, 0, 0); COLOR_COUNT];
+        c[ColorTag::Deep as usize] = Color::RGB(14, 14, 14);
+        c[ColorTag::MainDark as usize] = Color::RGB(25, 25, 25);
+        c[ColorTag::Main as usize] = Color::RGB(31, 31, 31);
+        c[ColorTag::MainLight as usize] = Color::RGB(36, 36, 36);
         ColorMap { colors: c }
     }
     pub fn get(&self, tag: ColorTag) -> Color {
@@ -23,21 +26,5 @@ impl ColorMap {
     }
     pub fn get_by_id(&self, id: usize) -> Color {
         self.colors[id]
-    }
-}
-#[derive(Clone, Copy)]
-pub struct Color {
-    r: u8,
-    g: u8,
-    b: u8,
-    a: u8,
-}
-
-impl Color {
-    pub fn new(r: u8, g: u8, b: u8) -> Color {
-        Color { r, g, b, a: 255 }
-    }
-    pub fn bl() -> Color {
-        Color::new(0, 0, 0)
     }
 }
