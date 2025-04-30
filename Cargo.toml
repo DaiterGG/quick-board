@@ -7,6 +7,13 @@ edition = "2024"
 criterion = "0.5.1"
 proptest = "1.6.0"
 
+[dependencies]
+enum-map = "2.7.3"
+enum_dispatch = "0.3.13"
+
+# [dependencies]
+# num_enum = "0.7.3"
+
 [dependencies.sdl2]
 version = "0.37"
 default-features = true
@@ -14,7 +21,7 @@ default-features = true
 # to use "bundled", "static-link"
 # I need to switch to "Windows, Linux and macOS with vcpkg"
 # more info: https://github.com/Rust-SDL2/rust-sdl2/issues/981#issuecomment-747685910
-features = ["gfx"]
+features = ["gfx","unsafe_textures"]
 
 
 [[bench]]

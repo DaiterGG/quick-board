@@ -5,11 +5,13 @@ mod app;
 use std::time::Duration;
 
 use app::{
-    action_pump::ActionPump, canvas_manager::CanvasManager, coords::WH,
-    event_manager::EventManager, pointer_state::PointerState, texture_manager::*,
-    ui_manager::UIManager, ui_map::UIMap,
+    action_pump::ActionPump, coords::WH, event_manager::EventManager, pointer_state::PointerState,
+    ui_manager::UIManager,
 };
-use sdl2::{pixels::Color, render::*, video::*};
+use sdl2::{
+    render::{Canvas, CanvasBuilder, TextureCreator},
+    video::{DisplayMode, Window, WindowContext},
+};
 
 pub fn main() -> Result<(), String> {
     // unsafe {
@@ -49,27 +51,13 @@ pub fn main() -> Result<(), String> {
         .map_err(|e| e.to_string())?;
 
     println!("Using SDL_Renderer \"{}\"", canvas.info().name);
-    let t_creator: TextureCreator<WindowContext> = canvas.texture_creator();
 
     // WindowState::new(sdl, video_subsystem, canvas, t_creator),
 
     let mut pointer = PointerState::new();
     let mut ui_manager = UIManager::new(window_size);
     let mut actions = ActionPump::new();
-    // TODO: move video_subsystem to texture manager
-    let mut texture_manager = TextureManager::new(t_creator, &video_subsystem);
-    let mut canvas_manager = CanvasManager::new(&mut texture_manager);
-    let mut ui_map = UIMap::new();
 
-    // canvas.with_texture_canvas(
-    //     &mut texture_manager
-    //         .predefined_mut(TextureId::DrawCanvas)
-    //         .texture,
-    //     |c| {
-    //         c.set_draw_color(Color::RGB(255, 255, 255));
-    //         c.clear();
-    //     },
-    // );
     // let mut fps = FPSManager::new();
     // println!("err {:?}", fps.set_framerate(200));
     // println!("fps: {:?}", fps.get_framerate());
@@ -84,19 +72,19 @@ pub fn main() -> Result<(), String> {
         }
 
         // Check if user triggered some ui events
-        ui_manager.pointer_collision(&mut pointer, &mut actions, &mut ui_map);
+        ui_manager.pointer_collision(&mut pointer, &mut actions);
 
         // Apply the actions, registered by the user
-        actions.apply(&mut canvas_manager, &pointer);
+        actions.apply();
 
         // Update the UI layout if nessesary
-        ui_manager.update(&mut ui_map);
+        ui_manager.update();
 
-        // Update canvas, if layout changed, use tool if needed
-        canvas_manager.update(&pointer, &mut ui_map, &mut canvas, &mut texture_manager);
+        // // Update canvas, if layout changed, use tool if needed
+        // CanvasManager::update(&mut app.states);
 
         // Draw the UI
-        ui_manager.draw_ui(&mut canvas, &ui_map, &texture_manager);
+        ui_manager.draw_ui(&mut canvas);
 
         // std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 200));
 
@@ -107,7 +95,7 @@ pub fn main() -> Result<(), String> {
         frames += 1;
         let elapsed = last_frame.elapsed();
         if elapsed < Duration::new(0, 1_000_000_000u32 / 1000) {
-            // NOTE: this does not give exactly 1000 fps, probably bc it sleeps more than 1 ms
+            // NOTE: this does not give exactly 1000 fps, probably bc it sleeps more that 1 ms
             std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 1000) - elapsed);
         }
         // println!("{:?}", elapsed);

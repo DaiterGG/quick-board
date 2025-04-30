@@ -6,10 +6,14 @@ use std::time::Duration;
 
 use app::{
     action_pump::ActionPump, canvas_manager::CanvasManager, coords::WH,
-    event_manager::EventManager, pointer_state::PointerState, texture_manager::*,
+    event_manager::EventManager, pointer_state::PointerState, texture_manager::TextureManager,
     ui_manager::UIManager, ui_map::UIMap,
 };
-use sdl2::{pixels::Color, render::*, video::*};
+use sdl2::{
+    VideoSubsystem,
+    render::{Canvas, CanvasBuilder, TextureCreator},
+    video::{DisplayMode, Window, WindowContext},
+};
 
 pub fn main() -> Result<(), String> {
     // unsafe {
@@ -56,20 +60,10 @@ pub fn main() -> Result<(), String> {
     let mut pointer = PointerState::new();
     let mut ui_manager = UIManager::new(window_size);
     let mut actions = ActionPump::new();
-    // TODO: move video_subsystem to texture manager
-    let mut texture_manager = TextureManager::new(t_creator, &video_subsystem);
-    let mut canvas_manager = CanvasManager::new(&mut texture_manager);
+    let mut canvas_manager = CanvasManager::new();
     let mut ui_map = UIMap::new();
+    let mut texture_manager = TextureManager::new(t_creator, &video_subsystem);
 
-    // canvas.with_texture_canvas(
-    //     &mut texture_manager
-    //         .predefined_mut(TextureId::DrawCanvas)
-    //         .texture,
-    //     |c| {
-    //         c.set_draw_color(Color::RGB(255, 255, 255));
-    //         c.clear();
-    //     },
-    // );
     // let mut fps = FPSManager::new();
     // println!("err {:?}", fps.set_framerate(200));
     // println!("fps: {:?}", fps.get_framerate());
@@ -92,11 +86,12 @@ pub fn main() -> Result<(), String> {
         // Update the UI layout if nessesary
         ui_manager.update(&mut ui_map);
 
-        // Update canvas, if layout changed, use tool if needed
-        canvas_manager.update(&pointer, &mut ui_map, &mut canvas, &mut texture_manager);
+        // // Update canvas, if layout changed, use tool if needed
+        // CanvasManager::update(&mut app.states);
+        canvas_manager.update(&pointer, &mut ui_map, canvas);
 
         // Draw the UI
-        ui_manager.draw_ui(&mut canvas, &ui_map, &texture_manager);
+        ui_manager.draw_ui(&mut canvas, ui_map);
 
         // std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 200));
 

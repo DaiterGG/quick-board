@@ -1,4 +1,6 @@
-#[derive(Copy, Clone)]
+use sdl2::rect::Rect;
+
+#[derive(Copy, Clone, Debug)]
 pub struct WH {
     pub w: i32,
     pub h: i32,
@@ -8,7 +10,7 @@ impl WH {
         WH { w, h }
     }
 }
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct XY {
     pub x: i32,
     pub y: i32,
@@ -52,12 +54,13 @@ impl XYWH {
             self.h -= length;
         }
     }
-    pub fn is_within(&self, x: i32, y: i32) -> bool {
-        x >= self.x && x < self.x + self.w && y >= self.y && y < self.y + self.h
+    pub fn is_within(&self, pos: XY) -> bool {
+        pos.x >= self.x && pos.x < self.x + self.w && pos.y >= self.y && pos.y < self.y + self.h
     }
-}
-impl Default for XYWH {
-    fn default() -> Self {
+    pub fn to_rect(&self) -> Rect {
+        Rect::new(self.x, self.y, self.w as u32, self.h as u32)
+    }
+    pub fn zero() -> Self {
         Self {
             x: 0,
             y: 0,

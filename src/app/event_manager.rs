@@ -6,9 +6,8 @@ use sdl2::{
 };
 
 use super::{
-    coords::{WH, XYWH},
-    pointer_state::ButtonState,
-    states::States,
+    coords::{WH, XY, XYWH},
+    pointer_state::{ButtonState, PointerState},
     ui_manager::{self, UIManager},
 };
 
@@ -21,10 +20,12 @@ impl EventManager {
             pump: sdl.event_pump()?,
         })
     }
-    pub fn handle_events(&mut self, states: &mut States) -> Result<(), String> {
+    pub fn handle_events(
+        &mut self,
+        pointer: &mut PointerState,
+        ui: &mut UIManager,
+    ) -> Result<(), String> {
         // let mouse_state = MouseState::new(&self.pump);
-        let pntr = &mut states.pointer;
-        let ui = &mut states.ui;
 
         for event in self.pump.poll_iter() {
             match event {
@@ -41,30 +42,28 @@ impl EventManager {
                     ..
                 } => {
                     ui.window_size = WH { w, h };
-                    ui.now_is_require_update();
+                    ui.requires_update = true;
                 }
 
                 Event::MouseMotion { x, y, .. } => {
-                    pntr.updated = true;
-                    pntr.x = x;
-                    pntr.y = y;
+                    pointer.updated = true;
+                    pointer.pos = XY::new(x, y);
                 }
                 Event::MouseButtonDown { mouse_btn, .. } => {
-                    pntr.updated = true;
+                    pointer.updated = true;
                     match mouse_btn {
-                        MouseButton::Left => pntr.left = ButtonState::Pressed,
-                        MouseButton::Right => pntr.right = ButtonState::Pressed,
-                        MouseButton::Middle => pntr.middle = ButtonState::Pressed,
+                        MouseButton::Left => pointer.left = ButtonState::Pressed,
+                        MouseButton::Right => pointer.right = ButtonState::Pressed,
+                        MouseButton::Middle => pointer.middle = ButtonState::Pressed,
                         _ => {}
                     }
                 }
                 Event::MouseButtonUp { mouse_btn, .. } => {
-                    pntr.updated = true;
-                    println!("true");
+                    pointer.updated = true;
                     match mouse_btn {
-                        MouseButton::Left => pntr.left = ButtonState::Released,
-                        MouseButton::Right => pntr.right = ButtonState::Released,
-                        MouseButton::Middle => pntr.middle = ButtonState::Released,
+                        MouseButton::Left => pointer.left = ButtonState::Released,
+                        MouseButton::Right => pointer.right = ButtonState::Released,
+                        MouseButton::Middle => pointer.middle = ButtonState::Released,
                         _ => {}
                     }
                 }

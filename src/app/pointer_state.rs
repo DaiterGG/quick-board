@@ -1,15 +1,15 @@
-use super::ui_builder::Id;
+use super::{coords::XY, predefined::IdUsize};
 
 pub struct PointerState {
     pub updated: bool,
-    pub x: i32,
-    pub y: i32,
+    pub pos: XY,
     // TODO: put in the array
     pub left: ButtonState,
     pub middle: ButtonState,
     pub right: ButtonState,
-    pub interacting_with: Option<Id>,
+    pub interacting_with: Option<IdUsize>,
 }
+
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub enum ButtonState {
     Pressed, // on this frame
@@ -24,8 +24,7 @@ impl PointerState {
         // NOTE: if poiter is not moved on launch - bug
         // FIXME: (optional)
         PointerState {
-            x: 0,
-            y: 0,
+            pos: XY::new(0, 0),
             updated: false,
             left: ButtonState::Idle,
             right: ButtonState::Idle,
@@ -34,21 +33,25 @@ impl PointerState {
         }
     }
     pub fn reset(&mut self) {
+        use ButtonState::*;
         self.left = match self.left {
-            ButtonState::Pressed => ButtonState::Held,
-            ButtonState::Released => ButtonState::Idle,
+            Pressed => Held,
+            Released => Idle,
             _ => self.left,
         };
         self.middle = match self.middle {
-            ButtonState::Pressed => ButtonState::Held,
-            ButtonState::Released => ButtonState::Idle,
+            Pressed => Held,
+            Released => Idle,
             _ => self.middle,
         };
         self.right = match self.right {
-            ButtonState::Pressed => ButtonState::Held,
-            ButtonState::Released => ButtonState::Idle,
+            Pressed => Held,
+            Released => Idle,
             _ => self.right,
         };
+        if self.left == Idle && self.right == Idle && self.middle == Idle {
+            self.interacting_with = None;
+        }
         self.updated = false;
     }
 }
