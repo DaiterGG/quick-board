@@ -11,8 +11,8 @@ pub type StepId = usize;
 pub struct CanvasManager {
     pub data: CanvasData,
     // ui_window_was_updated: bool,
-    current_tool: ToolIdUsize,
-    tools: Vec<Tool>,
+    current_tool: ToolId,
+    tools: Tools,
 }
 /// data to pass to tools and save to config
 ///
@@ -46,8 +46,8 @@ impl CanvasManager {
                 targeted_ui_element: window_id,
             },
             // ui_window_was_updated: true,
-            current_tool: ToolId::Brush as usize,
-            tools: Tool::init_all_tools(),
+            current_tool: ToolId::Brush,
+            tools: Tools::init_all_tools(),
         }
     }
     pub fn update(
@@ -59,7 +59,26 @@ impl CanvasManager {
     ) {
         let draw_win_transform = ui_map.element(self.data.targeted_ui_element).transform;
 
-        self.tools[self.current_tool].process_stroke(&mut self.data, pointer, canvas, textures);
+        // self.tools[self.current_tool].process_stroke(&mut self.data, pointer, canvas, textures);
+        match self.current_tool {
+            ToolId::Brush => {
+                let stroke_at = pointer
+                    .pos
+                    .transform_from(self.data.screen_zoom, self.data.screen_pos);
+
+                self.tools.brush.process_stroke(
+                    &mut self.data,
+                    pointer,
+                    stroke_at,
+                    canvas,
+                    textures,
+                );
+            }
+            ToolId::Move => {
+                self.tools.move_tool.process_stroke(&mut self.data, pointer);
+            }
+            _ => {}
+        }
 
         //draw to buffer
         let ui_tex_id = self.data.targeted_ui_texture;
@@ -80,7 +99,7 @@ impl CanvasManager {
         // }
     }
     pub fn change_tool(&mut self, tool_id: ToolId) {
-        self.current_tool = tool_id as usize;
+        self.current_tool = tool_id;
         // self.ui_window_was_updated = true;
     }
     pub fn add_zoom(&mut self, zoom_to_add: f32) {

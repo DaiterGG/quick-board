@@ -1,10 +1,7 @@
 use super::{
     canvas_manager::*, coords::*, history_step::HistoryStep, pointer_state::*, texture_manager::*,
-    tool_trait::ToolData,
 };
 use sdl2::{gfx::primitives::DrawRenderer, pixels::Color, render::*, video::Window};
-
-use super::tool_trait::ToolTrait;
 
 pub struct Brush {
     brush_size: i32,
@@ -21,16 +18,17 @@ impl Brush {
             color: Color::RGB(222, 222, 222),
         }
     }
-}
-impl ToolTrait for Brush {
-    fn process_stroke(&mut self, data: ToolData) {
-        if data.pointer.left == ButtonState::Idle {
+    pub fn process_stroke(
+        &mut self,
+        data: &mut CanvasData,
+        pointer: &PointerState,
+        stroke_at: XY,
+        canvas: &mut Canvas<Window>,
+        t_manager: &mut TextureManager,
+    ) {
+        if pointer.left == ButtonState::Idle {
             return;
         }
-        let stroke_at = data
-            .pointer
-            .pos
-            .transform_from(data.c_data.screen_zoom, data.c_data.screen_pos);
 
         let step = if pointer.left == ButtonState::Pressed {
             let step_id = data.history.add_step();

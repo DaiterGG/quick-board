@@ -2,7 +2,7 @@ use sdl2::{render::*, video::Window};
 
 use super::{
     canvas_manager::CanvasData, coords::XY, history_step::HistoryStep, pointer_state::PointerState,
-    texture_manager::TextureManager, tool_trait::ToolTrait,
+    texture_manager::TextureManager,
 };
 
 pub struct Fill;
@@ -10,9 +10,7 @@ impl Fill {
     pub fn new() -> Self {
         Self {}
     }
-}
-impl ToolTrait for Fill {
-    fn process_stroke(
+    pub fn process_stroke(
         &mut self,
         data: &mut CanvasData,
         pointer: &PointerState,
