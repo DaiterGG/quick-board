@@ -8,6 +8,7 @@ pub struct PointerState {
     pub middle: ButtonState,
     pub right: ButtonState,
     pub interacting_with: Option<IdUsize>,
+    pub scroll_y: i32,
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
@@ -30,6 +31,7 @@ impl PointerState {
             right: ButtonState::Idle,
             middle: ButtonState::Idle,
             interacting_with: None,
+            scroll_y: 0,
         }
     }
     pub fn reset(&mut self) {
@@ -52,6 +54,7 @@ impl PointerState {
         if self.left == Idle && self.right == Idle && self.middle == Idle {
             self.interacting_with = None;
         }
+        self.scroll_y = 0;
         self.updated = false;
     }
 }

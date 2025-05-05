@@ -4,7 +4,10 @@ use sdl2::{
     video::Window,
 };
 
-use super::{coords::XYWH, history_step::HistoryStep, layer::Layer, texture_data::TextureData};
+use super::{
+    canvas_manager::CanvasData, coords::XYWH, history_step::HistoryStep, layer::Layer,
+    texture_data::TextureData, texture_manager::TextureManager,
+};
 
 pub struct History {
     pub steps: Vec<HistoryStep>,
@@ -22,7 +25,7 @@ impl History {
         }
     }
     pub fn selected_step_mut(&mut self) -> &mut HistoryStep {
-        let id = self.selected_h_step.unwrap_or(self.add_step());
+        let id = self.selected_h_step.unwrap_or_else(|| self.add_step());
         &mut self.steps[id]
     }
     pub fn add_step(&mut self) -> usize {
@@ -42,6 +45,7 @@ impl History {
         } else {
             //add root and set it to the current layer
             self.steps.push(HistoryStep::new());
+
             current_layer.root_id = Some(new_id);
             current_layer.leaf_id = Some(new_id);
         }
@@ -62,13 +66,13 @@ impl History {
     pub fn full_draw(
         &self,
         canvas: &mut Canvas<Window>,
-        ui_texture: &mut TextureData,
-        canvas_transform: XYWH,
-        src: Rect,
-        dst: Rect,
+        t_manager: &mut TextureManager,
+        canvas_data: &CanvasData,
+        src: XYWH,
+        dst: XYWH,
     ) {
         for step in &self.steps {
-            // step.full_draw(&canvas, &ui_texture, canvas_transform, &src, &dst);
+            step.full_draw(canvas, t_manager, canvas_data, src, dst);
         }
     }
 }

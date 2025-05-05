@@ -38,20 +38,20 @@ pub type IdUsize = usize;
 // }
 markup! {
     // main layout
-    RootMain:Div[Header,RightWide,RightTools,MainCanvas],
+    RootMain:Div[Header,RightWide,RightTools,DrawWindow],
     /**/Header:Div[],
     /**/RightWide:Div[],
-    /**/RightTools:Div[IndButtons,BrushButton1,GapButtonBrush,BrushButton2,GapButtonFill],
-    /**/MainCanvas:DrawWindow[],
+    /**/RightTools:Div[IndButtons,BrushButton,GapButtonBrush,MoveButton,GapButtonFill],
+    /**/DrawWindow:DrawWindow[],
 
     // tool buttons
     IndButtons:Div[],
 
     GapButtonBrush:Div[],
-    BrushButton1:Button[],
+    BrushButton:Button[],
 
     GapButtonFill:Div[],
-    BrushButton2:Button[],
+    MoveButton:Button[],
 
     // for testing
     ForTest1:Div[],

@@ -15,7 +15,6 @@ impl ToolTrait for Fill {
     fn process_stroke(
         &mut self,
         data: &mut CanvasData,
-        stroke_at: XY,
         pointer: &PointerState,
         canvas: &mut Canvas<Window>,
         textures: &mut TextureManager,

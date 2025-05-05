@@ -18,6 +18,9 @@ impl DrawWindow {
         if was_hit && pointer.left == ButtonState::Pressed {
             pointer.interacting_with = Some(id);
         }
+        if !was_hit && pointer.interacting_with == Some(id) {
+            pointer.interacting_with = None;
+        }
         // if pointer.interacting_with == Some(id) {
         //     let canvas_hit = XY {
         //         x: pointer.pos.x - element.transform.x,

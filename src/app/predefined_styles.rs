@@ -64,17 +64,17 @@ impl PredefinedStyles {
 
             IndButtons: A [A::block(Vertical, Start, Pixels(3))],
 
-            BrushButton1: A [A::absolute(XY::new(50, 0), XY::new(50, 0), (Pixels(44), Pixels(44)))],
-            BrushButton1: D [D::idle(data::bg(MainLight))],
+            BrushButton: A [A::absolute(XY::new(50, 0), XY::new(50, 0), (Pixels(44), Pixels(44)))],
+            BrushButton: D [D::idle(data::bg(MainLight))],
 
             GapButtonBrush: A [A::block(Vertical, Start, Pixels(47))],
             GapButtonFill: A [A::block(Vertical, Start, Pixels(47))],
 
-            BrushButton2: A [A::absolute(XY::new(50, 0), XY::new(50, 0), (Pixels(44), Pixels(44)))],
-            BrushButton2: D [D::idle(data::bg(MainLight))],
+            MoveButton: A [A::absolute(XY::new(50, 0), XY::new(50, 0), (Pixels(44), Pixels(44)))],
+            MoveButton: D [D::idle(data::bg(MainLight))],
 
 
-            MainCanvas: D [D::idle(data::bg(Deep))],
+            DrawWindow: D [D::idle(data::transparent())],
 
             // test elements
             ForTest1: A [A::block(Horisontal, Start, Persent(40))],

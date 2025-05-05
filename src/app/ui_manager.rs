@@ -9,6 +9,7 @@ use super::{
 use sdl2::{
     pixels::Color,
     render::{Canvas, RenderTarget},
+    video::Window,
 };
 
 /// layers: root elements (ids), z-indexed
@@ -93,7 +94,7 @@ impl UIManager {
     ) -> bool {
         // let element = ui_map.element(id);
         //if parrent wasn't hit, then children are not calculated
-        let hit = parrent_hit && ui_map.element(id).transform.is_within(pointer.pos);
+        let hit = parrent_hit && pointer.pos.is_within(ui_map.element(id).transform);
 
         if let Some(dis) = ui_map.display_mut(id) {
             dis.set_state(DisplayState::Hovered, hit);
@@ -141,20 +142,13 @@ impl UIManager {
         hit
     }
     /// called once per frame
-    pub fn draw_ui<T: RenderTarget>(
-        &self,
-        canvas: &mut Canvas<T>,
-        ui_map: &UIMap,
-        textures: &TextureManager,
-    ) {
+    pub fn draw_ui(&self, canvas: &mut Canvas<Window>, ui_map: &UIMap, textures: &TextureManager) {
         canvas.set_draw_color(Color::RGB(14, 14, 14));
         canvas.clear();
 
         // let dis = self.styles.get_display(self.layers[0].id);
         // dis.inspect(|d| println!("{:?}", d.active_states));
 
-        // TODO: draw draw_canvas here
-        //
         for i in 0..self.layers.len() {
             ui_map
                 .element(self.layers[i])

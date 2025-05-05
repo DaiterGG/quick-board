@@ -84,6 +84,8 @@ impl TextureManager {
         &mut self.draw_textures[id]
     }
     pub fn init_draw_texture(&mut self) -> usize {
+        // println!("unused: {}", self.unused_draw_textures.len());
+        // println!("draw: {}", self.draw_textures.len());
         if self.unused_draw_textures.len() > 0 {
             return self.unused_draw_textures.pop().unwrap();
         }
@@ -92,9 +94,12 @@ impl TextureManager {
             .t_creator
             .create_texture_target(None, DRAW_TEX_SIZE, DRAW_TEX_SIZE);
 
-        self.draw_textures.push(res.unwrap_or_else(|e| {
+        let mut tex = res.unwrap_or_else(|e| {
             panic!("Failed to create draw texture: {}", e);
-        }));
+        });
+
+        tex.set_blend_mode(BlendMode::Blend);
+        self.draw_textures.push(tex);
         id
     }
 }

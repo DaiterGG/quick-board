@@ -1,4 +1,7 @@
-use sdl2::render::{Canvas, RenderTarget, Texture};
+use sdl2::{
+    render::{Canvas, RenderTarget, Texture},
+    video::Window,
+};
 
 use super::{coords::XYWH, predefined::*, texture_manager::TextureManager, ui_map::UIMap};
 
@@ -24,12 +27,7 @@ impl UIElement {
             transform: XYWH::zero(),
         }
     }
-    pub fn draw_to<T: RenderTarget>(
-        &self,
-        canvas: &mut Canvas<T>,
-        styles: &UIMap,
-        textures: &TextureManager,
-    ) {
+    pub fn draw_to(&self, canvas: &mut Canvas<Window>, styles: &UIMap, textures: &TextureManager) {
         let dis = styles.display(self.id);
         let color = &styles.colors;
 

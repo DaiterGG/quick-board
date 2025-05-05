@@ -2,19 +2,19 @@ extern crate sdl2;
 
 mod app;
 
-use std::time::Duration;
+use std::{env, time::Duration};
 
 use app::{
     action_pump::ActionPump, canvas_manager::CanvasManager, coords::WH,
-    event_manager::EventManager, pointer_state::PointerState, texture_manager::*,
+    event_manager::EventManager, pointer_state::PointerState, predefined::Id, texture_manager::*,
     ui_manager::UIManager, ui_map::UIMap,
 };
-use sdl2::{pixels::Color, render::*, video::*};
+use sdl2::{render::*, video::*};
 
 pub fn main() -> Result<(), String> {
-    // unsafe {
-    //     env::set_var("RUST_BACKTRACE", "1");
-    // }
+    unsafe {
+        env::set_var("RUST_BACKTRACE", "1");
+    }
     let sdl = sdl2::init()?;
     let video_subsystem = sdl.video()?;
     let mut event_manager = EventManager::new(&sdl)?;
@@ -27,7 +27,7 @@ pub fn main() -> Result<(), String> {
         WH { w: 1920, h: 1080 }
     };
     let window = video_subsystem
-        .window("foo", window_size.w as u32, window_size.h as u32)
+        .window("Quick Board", window_size.w as u32, window_size.h as u32)
         // .maximized()
         .position_centered()
         .resizable()
@@ -58,8 +58,9 @@ pub fn main() -> Result<(), String> {
     let mut actions = ActionPump::new();
     // TODO: move video_subsystem to texture manager
     let mut texture_manager = TextureManager::new(t_creator, &video_subsystem);
-    let mut canvas_manager = CanvasManager::new(&mut texture_manager);
     let mut ui_map = UIMap::new();
+    let mut canvas_manager =
+        CanvasManager::new(&mut texture_manager, &mut ui_map, Id::DrawWindow as usize);
 
     // canvas.with_texture_canvas(
     //     &mut texture_manager
@@ -79,7 +80,7 @@ pub fn main() -> Result<(), String> {
     'main: loop {
         // Get the input and updates from user
         let res = event_manager.handle_events(&mut pointer, &mut ui_manager);
-        if let Err(_e) = res {
+        if res == Ok(true) {
             break 'main;
         }
 

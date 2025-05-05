@@ -2,7 +2,9 @@ use std::cmp::*;
 
 use sdl2::pixels::Color;
 use sdl2::rect::Rect;
+use sdl2::render::BlendMode::Blend;
 use sdl2::render::*;
+use sdl2::video::Window;
 
 use super::color_map::*;
 use super::coords::*;
@@ -66,11 +68,11 @@ impl Display {
     pub fn set_state(&mut self, state: DisplayState, active: bool) {
         self.active_states[state as usize] = active;
     }
-    pub fn draw<T: RenderTarget>(
+    pub fn draw(
         &self,
         pos: XYWH,
         at_front: bool,
-        canvas: &mut Canvas<T>,
+        canvas: &mut Canvas<Window>,
         colors: &ColorMap,
         textures: &TextureManager,
     ) {
@@ -98,7 +100,7 @@ pub struct DisplayData {
     edge_radius: u8,
     border: Option<Border>,
 }
-#[derive(PartialEq, Eq, Clone, Copy)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
 enum TexId {
     Locked(LockedTexId),
     Open(usize),
@@ -118,6 +120,16 @@ enum TexId {
 //     }
 // }
 impl DisplayData {
+    pub fn transparent() -> Self {
+        DisplayData {
+            draw_at_front: false,
+            texture_id: TexId::None,
+            color: None,
+            sub_color: None,
+            edge_radius: 0,
+            border: None,
+        }
+    }
     /// for draw behind childrens
     pub fn bg(color: ColorTag) -> Self {
         DisplayData {
@@ -154,10 +166,10 @@ impl DisplayData {
         self.edge_radius = radius;
         self
     }
-    fn draw<T: RenderTarget>(
+    fn draw(
         &self,
         element_pos: XYWH,
-        canvas: &mut Canvas<T>,
+        canvas: &mut Canvas<Window>,
         colors: &ColorMap,
         textures: &TextureManager,
     ) {
@@ -182,6 +194,7 @@ impl DisplayData {
                 } else {
                     Some(element_pos.to_rect())
                 };
+                // println!("{:?},{:?}", data.src, dst);
                 let _ = canvas.copy(&data.texture, data.src, dst);
             }
             _ => {}
@@ -219,7 +232,7 @@ impl ColorDisplay {
         let mut rgba: Color = colors.get(self.color);
         rgba.a = self.alfa as u8;
         canvas.set_draw_color(rgba);
-        canvas.set_blend_mode(sdl2::render::BlendMode::Blend);
+        canvas.set_blend_mode(Blend);
         let _ = canvas.fill_rect(Rect::new(pos.x, pos.y, pos.w as u32, pos.h as u32));
     }
 }

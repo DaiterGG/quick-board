@@ -11,6 +11,7 @@ mod fill_tool;
 mod history;
 mod history_step;
 mod layer;
+mod move_tool;
 pub mod pointer_state;
 pub mod predefined;
 mod predefined_styles;

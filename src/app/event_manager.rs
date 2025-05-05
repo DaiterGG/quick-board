@@ -1,19 +1,11 @@
-use sdl2::{
-    EventPump, Sdl,
-    event::{Event, WindowEvent},
-    keyboard::Keycode,
-    mouse::{MouseButton, MouseState},
-};
+use sdl2::{EventPump, Sdl, event::*, keyboard::Keycode, mouse::*};
 
-use super::{
-    coords::{WH, XY, XYWH},
-    pointer_state::{ButtonState, PointerState},
-    ui_manager::{self, UIManager},
-};
+use super::{coords::*, pointer_state::*, ui_manager::*};
 
 pub struct EventManager {
     pump: EventPump,
 }
+type UserQuit = bool;
 impl EventManager {
     pub fn new(sdl: &Sdl) -> Result<EventManager, String> {
         Ok(Self {
@@ -24,7 +16,7 @@ impl EventManager {
         &mut self,
         pointer: &mut PointerState,
         ui: &mut UIManager,
-    ) -> Result<(), String> {
+    ) -> Result<UserQuit, String> {
         // let mouse_state = MouseState::new(&self.pump);
 
         for event in self.pump.poll_iter() {
@@ -33,7 +25,7 @@ impl EventManager {
                 | Event::KeyDown {
                     keycode: Some(Keycode::Escape),
                     ..
-                } => return Err("USER QUIT".to_owned()),
+                } => return Ok(true),
                 Event::Display { display_event, .. } => {
                     // println!("{:?}", display_event);
                 }
@@ -48,6 +40,10 @@ impl EventManager {
                 Event::MouseMotion { x, y, .. } => {
                     pointer.updated = true;
                     pointer.pos = XY::new(x, y);
+                }
+                Event::MouseWheel { y, .. } => {
+                    pointer.updated = true;
+                    pointer.scroll_y = y;
                 }
                 Event::MouseButtonDown { mouse_btn, .. } => {
                     pointer.updated = true;
@@ -70,6 +66,6 @@ impl EventManager {
                 _ => {}
             }
         }
-        Ok(())
+        Ok(false)
     }
 }

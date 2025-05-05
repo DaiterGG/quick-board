@@ -3,13 +3,11 @@ use super::pointer_state::PointerState;
 use super::predefined::{Id, IdUsize};
 
 use super::canvas_manager::CanvasManager;
-use super::texture_manager;
-use std::fs::canonicalize;
+use super::tool_trait::ToolId;
 use std::mem::replace;
 
 pub enum Action {
     ButtonPressed(IdUsize),
-    CanvasPressed(XY),
 }
 
 pub struct ActionPump {
@@ -32,19 +30,15 @@ impl ActionPump {
         let actions = self.get_and_clear();
         for action in actions {
             match action {
-                Action::ButtonPressed(id) if id == Id::BrushButton1 as usize => {
-                    // canvas_manager.screen_pos = XY {
-                    //     x: canvas_manager.screen_pos.x + 10,
-                    //     y: canvas_manager.screen_pos.y + 10,
-                    // };
-                    canvas_manager.add_zoom(0.05);
+                Action::ButtonPressed(id) if id == Id::BrushButton as usize => {
+                    canvas_manager.change_tool(ToolId::Brush);
                 }
-                Action::ButtonPressed(id) if id == Id::BrushButton2 as usize => {
-                    canvas_manager.add_zoom(-0.05);
+                Action::ButtonPressed(id) if id == Id::MoveButton as usize => {
+                    canvas_manager.change_tool(ToolId::Move);
                 }
-                Action::CanvasPressed(pos) => {
-                    //
-                }
+                // Action::CanvasPressed(pos) => {
+                //     //
+                // }
                 _ => (),
             }
         }
