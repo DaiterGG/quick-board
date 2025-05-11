@@ -4,6 +4,7 @@ mod button;
 pub mod canvas_manager;
 mod color_map;
 pub mod coords;
+mod cursor;
 mod draw_window;
 mod element_map;
 pub mod event_manager;

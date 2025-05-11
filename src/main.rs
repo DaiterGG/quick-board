@@ -1,6 +1,9 @@
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+
 extern crate sdl2;
 
 mod app;
+mod debug;
 
 use std::{env, time::Duration};
 
@@ -60,7 +63,7 @@ pub fn main() -> Result<(), String> {
     let mut texture_manager = TextureManager::new(t_creator, &video_subsystem);
     let mut ui_map = UIMap::new();
     let mut canvas_manager =
-        CanvasManager::new(&mut texture_manager, &mut ui_map, Id::DrawWindow as usize);
+        CanvasManager::new(&mut texture_manager, &mut ui_map, Id::DrawWindow as i32);
 
     // canvas.with_texture_canvas(
     //     &mut texture_manager
@@ -73,13 +76,14 @@ pub fn main() -> Result<(), String> {
     // );
     // let mut fps = FPSManager::new();
     // println!("err {:?}", fps.set_framerate(200));
-    // println!("fps: {:?}", fps.get_framerate());
+
     let mut time = std::time::Instant::now();
     let mut last_frame = std::time::Instant::now();
+    let mut lazy_buffer = std::time::Instant::now();
     let mut frames = 0;
     'main: loop {
         // Get the input and updates from user
-        let res = event_manager.handle_events(&mut pointer, &mut ui_manager);
+        let res = event_manager.handle_events(&mut pointer, &mut ui_manager, &mut actions);
         if res == Ok(true) {
             break 'main;
         }
@@ -99,19 +103,26 @@ pub fn main() -> Result<(), String> {
         // Draw the UI
         ui_manager.draw_ui(&mut canvas, &ui_map, &texture_manager);
 
-        // std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 200));
-
         //tell the data, that the frame is over
         pointer.reset();
 
+        // buffer draw textures
+        if lazy_buffer.elapsed() >= Duration::from_millis(20) {
+            texture_manager.buffer_draw_texture();
+            lazy_buffer = std::time::Instant::now();
+        }
+
+        // std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 200));
         // fps.delay();
+
+        // fps lock
         frames += 1;
         let elapsed = last_frame.elapsed();
         if elapsed < Duration::new(0, 1_000_000_000u32 / 1000) {
             // NOTE: this does not give exactly 1000 fps, probably bc it sleeps more than 1 ms
             std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 1000) - elapsed);
         }
-        // println!("{:?}", elapsed);
+        // fps counter
         last_frame = std::time::Instant::now();
         if time.elapsed() >= Duration::from_secs(5) {
             println!("fps: {}", frames / 5);

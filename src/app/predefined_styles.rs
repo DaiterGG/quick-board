@@ -3,7 +3,7 @@ use crate::app::texture_manager::LockedTexId;
 use super::{
     color_map::ColorTag,
     coords::XY,
-    predefined::{ID_COUNT, Id},
+    predefined::{Id, ID_COUNT},
     style_align::{Align, Direction, Side, Value},
     style_display::{Display, DisplayData},
 };

@@ -1,13 +1,17 @@
 use super::coords::XY;
 use super::pointer_state::PointerState;
-use super::predefined::{Id, IdUsize};
+use super::predefined::*;
 
 use super::canvas_manager::CanvasManager;
 use super::tool_trait::ToolId;
 use std::mem::replace;
 
 pub enum Action {
-    ButtonPressed(IdUsize),
+    ButtonPressed(IdI32),
+    HoldTool(ToolId, bool),
+    Undo,
+    Redo,
+    BrushSize(bool),
 }
 
 pub struct ActionPump {
@@ -28,17 +32,19 @@ impl ActionPump {
     }
     pub fn apply(&mut self, canvas_manager: &mut CanvasManager, pointer: &PointerState) {
         let actions = self.get_and_clear();
+        use Action::*;
         for action in actions {
             match action {
-                Action::ButtonPressed(id) if id == Id::BrushButton as usize => {
+                ButtonPressed(id) if id == Id::BrushButton as i32 => {
                     canvas_manager.change_tool(ToolId::Brush);
                 }
-                Action::ButtonPressed(id) if id == Id::MoveButton as usize => {
+                ButtonPressed(id) if id == Id::MoveButton as i32 => {
                     canvas_manager.change_tool(ToolId::Move);
                 }
-                // Action::CanvasPressed(pos) => {
-                //     //
-                // }
+                HoldTool(id, hold_in) => canvas_manager.try_hold_tool(id, hold_in),
+                Undo => canvas_manager.undo(),
+                Redo => canvas_manager.redo(),
+                BrushSize(increase) => canvas_manager.tools.brush.change_brush_size(increase),
                 _ => (),
             }
         }

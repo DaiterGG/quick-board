@@ -1,6 +1,6 @@
 use crate::app::action_pump::Action;
 
-use super::{action_pump::ActionPump, pointer_state::*, predefined::IdUsize};
+use super::{action_pump::ActionPump, pointer_state::*, predefined::*};
 
 pub struct Button {}
 // impl Button {
@@ -8,7 +8,7 @@ pub struct Button {}
 //     }
 // }
 impl Button {
-    pub fn before_collision(id: IdUsize, actions: &mut ActionPump, pointer: &mut PointerState) {
+    pub fn before_collision(id: IdI32, actions: &mut ActionPump, pointer: &mut PointerState) {
         if pointer.left == ButtonState::Pressed {
             // NOTE: this will only register the last sub button
             // TEST: this interaciton later

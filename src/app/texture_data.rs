@@ -1,10 +1,6 @@
-use sdl2::{
-    rect::Rect,
-    render::{BlendMode, Texture, TextureCreator},
-    video::WindowContext,
-};
+use sdl2::{render::*, video::WindowContext};
 
-use super::coords::WH;
+use super::coords::*;
 
 /// mainly to use in the ui
 ///
@@ -14,8 +10,8 @@ use super::coords::WH;
 /// * `size`: texture original size
 pub struct TextureData {
     pub texture: Texture,
-    pub src: Option<Rect>,
-    pub dst: Option<Rect>,
+    pub src: Option<XYWH>,
+    pub dst: Option<XYWH>,
     pub size: WH,
 }
 impl TextureData {

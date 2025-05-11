@@ -55,6 +55,28 @@ impl XY {
             y: self.y - other.y,
         }
     }
+
+    pub fn distance(&self, distance_to: XY) -> f32 {
+        (((self.x - distance_to.x) as f64 * (self.x - distance_to.x) as f64
+            + (self.y - distance_to.y) as f64 * (self.y - distance_to.y) as f64) as f32)
+            .sqrt()
+    }
+    pub fn to_bound(&self, other: XY) -> XXYY {
+        XXYY::new(
+            min(self.x, other.x),
+            max(self.x, other.x),
+            min(self.y, other.y),
+            max(self.y, other.y),
+        )
+    }
+    pub fn expand(&self, x: i32, y: i32) -> XXYY {
+        XXYY {
+            xa: self.x - x,
+            xb: self.x + x,
+            ya: self.y - y,
+            yb: self.y + y,
+        }
+    }
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -98,14 +120,26 @@ impl XYWH {
             h: (self.h as f32 * zoom) as i32,
         }
     }
-    pub fn get_overlap(&self, other: XYWH) -> XYWH {
-        let x = max(self.x, other.x);
-        let y = max(self.y, other.y);
+    pub fn get_overlap(&self, other: WH) -> XYWH {
+        let x = max(self.x, 0);
+        let y = max(self.y, 0);
         XYWH {
             x,
             y,
-            w: min(self.x + self.w, other.x + other.w) - x,
-            h: min(self.y + self.h, other.y + other.h) - y,
+            w: max(0, min(self.x + self.w, other.w) - x),
+            h: max(0, min(self.y + self.h, other.h) - y),
+        }
+    }
+    pub fn xy(&self) -> XY {
+        XY {
+            x: self.x,
+            y: self.y,
+        }
+    }
+    pub fn wh(&self) -> WH {
+        WH {
+            w: self.w,
+            h: self.h,
         }
     }
 
@@ -116,5 +150,31 @@ impl XYWH {
             w: 0,
             h: 0,
         }
+    }
+    pub fn to_bound(&self) -> XXYY {
+        XXYY::new(self.x, self.x + self.w, self.y, self.y + self.h)
+    }
+}
+#[derive(Copy, Clone, Debug)]
+pub struct XXYY {
+    pub xa: i32,
+    pub xb: i32,
+    pub ya: i32,
+    pub yb: i32,
+}
+impl XXYY {
+    pub fn new(xa: i32, xb: i32, ya: i32, yb: i32) -> Self {
+        Self { xa, xb, ya, yb }
+    }
+    pub fn expand(&mut self, x: i32, y: i32) -> Self {
+        Self {
+            xa: self.xa - x,
+            xb: self.xb + x,
+            ya: self.ya - y,
+            yb: self.yb + y,
+        }
+    }
+    pub fn is_overlaping(&self, other: XXYY) -> bool {
+        self.xa <= other.xb && self.xb >= other.xa && self.ya <= other.yb && self.yb >= other.ya
     }
 }

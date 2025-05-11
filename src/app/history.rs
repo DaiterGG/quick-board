@@ -1,8 +1,8 @@
-use sdl2::{
-    rect::Rect,
-    render::{Canvas, Texture},
-    video::Window,
-};
+use std::cmp::min;
+
+use sdl2::{rect::Rect, render::*, video::Window};
+
+use crate::dl;
 
 use super::{
     canvas_manager::CanvasData, coords::XYWH, history_step::HistoryStep, layer::Layer,
@@ -25,14 +25,21 @@ impl History {
         }
     }
     pub fn selected_step_mut(&mut self) -> &mut HistoryStep {
-        let id = self.selected_h_step.unwrap_or_else(|| self.add_step());
-        &mut self.steps[id]
+        if self.selected_h_step.is_none() {
+            self.add_step();
+        }
+        &mut self.steps[self.selected_h_step.unwrap()]
     }
-    pub fn add_step(&mut self) -> usize {
+    pub fn add_step(&mut self) {
         let current_layer_id = self.selected_layer.unwrap_or(self.add_layer());
+        dl!(self.layers.len());
         let current_layer = &mut self.layers[current_layer_id];
 
-        // todo: delete if not the last step selected
+        if let Some(id) = self.selected_h_step {
+            if id < self.steps.len() - 1 {
+                self.steps.truncate(id + 1);
+            }
+        }
         let new_id = self.steps.len();
 
         if let Some(leaf_id) = current_layer.leaf_id {
@@ -50,7 +57,6 @@ impl History {
             current_layer.leaf_id = Some(new_id);
         }
         self.selected_h_step = Some(new_id);
-        new_id
     }
     pub fn add_layer(&mut self) -> usize {
         let insert_index = if let Some(s) = self.selected_layer {
@@ -67,12 +73,27 @@ impl History {
         &self,
         canvas: &mut Canvas<Window>,
         t_manager: &mut TextureManager,
-        canvas_data: &CanvasData,
-        src: XYWH,
+        data: &CanvasData,
         dst: XYWH,
     ) {
-        for step in &self.steps {
-            step.full_draw(canvas, t_manager, canvas_data, src, dst);
+        if self.selected_h_step.is_none() {
+            return;
         }
+        let src = XYWH::new(
+            -min(0, (data.screen_pos.x as f32 / data.screen_zoom) as i32),
+            -min(0, (data.screen_pos.y as f32 / data.screen_zoom) as i32),
+            (dst.w as f32 / data.screen_zoom) as i32,
+            (dst.h as f32 / data.screen_zoom) as i32,
+        );
+        for step_id in 0..(self.selected_h_step.unwrap() + 1) {
+            if data.transform.w > 10_000 || data.transform.h > 10_000 {
+                self.steps[step_id].full_draw_double(canvas, t_manager, data, src, dst);
+            } else {
+                self.steps[step_id].full_draw(canvas, t_manager, data, src, dst);
+            }
+        }
+    }
+    pub fn finish_step(&mut self, t_manager: &mut TextureManager, canvas: &mut Canvas<Window>) {
+        self.steps[self.selected_h_step.unwrap()].make_static(t_manager, canvas);
     }
 }

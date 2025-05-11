@@ -1,7 +1,7 @@
 use std::cmp::*;
 
 use super::{
-    canvas_manager::CanvasData, coords::XY, history_step::HistoryStep, pointer_state::PointerState,
+    canvas_manager::CanvasData, coords::*, history_step::HistoryStep, pointer_state::PointerState,
     predefined::Id,
 };
 
@@ -17,7 +17,6 @@ impl Move {
     pub fn process_stroke(&mut self, data: &mut CanvasData, pointer: &PointerState) {
         if pointer.interacting_with == Some(data.targeted_ui_element) {
             if let Some(last) = self.last_strocke_at {
-                // println!("{:?}", pointer.pos.x - last.x);
                 data.screen_pos.x += pointer.pos.x - last.x;
                 data.screen_pos.y += pointer.pos.y - last.y;
             }
@@ -26,10 +25,28 @@ impl Move {
             self.last_strocke_at = None;
         }
         // println!("{:?}", self.last_strocke_at);
-        if pointer.scroll_y > 0 {
-            data.screen_zoom *= 1.1;
-        } else if pointer.scroll_y < 0 {
-            data.screen_zoom *= 0.9;
+        if pointer.scroll_y == 0 {
+            return;
         }
+
+        let zoom_by = if pointer.scroll_y > 0 {
+            data.screen_zoom * 0.1
+        } else {
+            data.screen_zoom * -0.1
+        };
+        let before = pointer
+            .pos
+            .transform_from(data.screen_zoom, data.screen_pos);
+        data.screen_zoom += zoom_by;
+        let after = pointer
+            .pos
+            .transform_from(data.screen_zoom, data.screen_pos);
+        let dif = before.substract(after);
+        let ui_dif = XY {
+            x: (dif.x as f32 * data.screen_zoom) as i32,
+            y: (dif.y as f32 * data.screen_zoom) as i32,
+        };
+
+        data.screen_pos = data.screen_pos.substract(ui_dif);
     }
 }

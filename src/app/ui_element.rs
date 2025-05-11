@@ -1,14 +1,11 @@
-use sdl2::{
-    render::{Canvas, RenderTarget, Texture},
-    video::Window,
-};
+use sdl2::{render::*, video::Window};
 
 use super::{coords::XYWH, predefined::*, texture_manager::TextureManager, ui_map::UIMap};
 
 pub struct UIElement {
     pub element_type: ElementType,
-    pub id: usize,
-    pub childrens: Vec<IdUsize>,
+    pub id: IdI32,
+    pub childrens: Vec<IdI32>,
     pub transform: XYWH,
 }
 #[derive(Copy, Clone)]
@@ -19,7 +16,7 @@ pub enum ElementType {
 }
 
 impl UIElement {
-    pub fn new(element: ElementType, id: usize, childrens: Vec<IdUsize>) -> Self {
+    pub fn new(element: ElementType, id: IdI32, childrens: Vec<IdI32>) -> Self {
         Self {
             element_type: element,
             id,
@@ -28,16 +25,14 @@ impl UIElement {
         }
     }
     pub fn draw_to(&self, canvas: &mut Canvas<Window>, styles: &UIMap, textures: &TextureManager) {
-        let dis = styles.display(self.id);
+        let dis = &styles.displays[self.id as usize];
         let color = &styles.colors;
 
         dis.as_ref()
             .inspect(|d| d.draw(self.transform, false, canvas, color, textures));
 
         for i in 0..self.childrens.len() {
-            styles
-                .element(self.childrens[i])
-                .draw_to(canvas, styles, textures);
+            styles.elements[self.childrens[i] as usize].draw_to(canvas, styles, textures);
         }
 
         dis.as_ref()

@@ -1,25 +1,14 @@
-use super::{
-    element_map::ElementMap,
-    predefined::{ID_COUNT, Predefined},
-    predefined_styles::PredefinedStyles,
-};
+use super::{element_map::ElementMap, predefined_styles::PredefinedStyles};
 
-use super::{
-    color_map::{ColorMap, ColorTag},
-    coords::XY,
-    predefined::{Id, IdUsize},
-    style_align::{Align, Direction, Side, Value},
-    style_display::{Display, DisplayData as data},
-    ui_element::UIElement,
-};
+use super::{color_map::*, style_align::*, style_display::*, ui_element::UIElement};
 
 pub struct UIMap {
-    elements: Vec<UIElement>,
+    pub elements: Vec<UIElement>,
 
     // used separately, but defined here, for convienience
     // styles: Vec<(Align, Option<Display>)>,
-    aligns: Vec<Align>,
-    displays: Vec<Option<Display>>,
+    pub aligns: Vec<Align>,
+    pub displays: Vec<Option<Display>>,
 
     pub colors: ColorMap,
 }
@@ -33,25 +22,6 @@ impl UIMap {
             displays,
             colors: ColorMap::new(),
         }
-    }
-    pub fn align(&self, index: usize) -> Align {
-        self.aligns[index]
-    }
-    pub fn set_align(&mut self, align: Align, index: IdUsize) {
-        self.aligns[index] = align;
-    }
-
-    pub fn display(&self, id: IdUsize) -> &Option<Display> {
-        &self.displays[id]
-    }
-    pub fn display_mut(&mut self, id: IdUsize) -> &mut Option<Display> {
-        &mut self.displays[id]
-    }
-    pub fn element(&self, id: IdUsize) -> &UIElement {
-        &self.elements[id]
-    }
-    pub fn element_mut(&mut self, id: IdUsize) -> &mut UIElement {
-        &mut self.elements[id]
     }
 }
 

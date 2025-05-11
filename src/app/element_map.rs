@@ -1,7 +1,4 @@
-use super::{
-    predefined::{Id, IdUsize, Predefined},
-    ui_element::{ElementType, UIElement},
-};
+use super::{predefined::*, ui_element::*};
 
 // #[derive(Clone, Copy)]
 // /// unique name for each id_block
@@ -11,7 +8,7 @@ use super::{
 //     ForTest1,
 // }
 struct OverrideChildren {
-    children: Vec<Vec<IdUsize>>,
+    children: Vec<Vec<IdI32>>,
 }
 
 pub struct ElementMap;
@@ -25,11 +22,11 @@ impl ElementMap {
         // }
         predefined
     }
-    pub fn init_layers() -> Vec<usize> {
+    pub fn init_layers() -> Vec<IdI32> {
         let mut layers = Vec::new();
         // TODO: read custom layouts from file
         // else
-        layers.push(Id::RootMain as usize);
+        layers.push(Id::RootMain as i32);
         layers
     }
 }

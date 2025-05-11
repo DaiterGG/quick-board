@@ -1,18 +1,25 @@
-use std::cmp::*;
-
 use sdl2::{pixels::Color, rect::Rect, render::*, video::Window};
 
+use crate::*;
+
 use super::{
-    coords::*, history::History, pointer_state::PointerState, predefined::Id,
-    style_display::DisplayState, texture_manager::*, tool_trait::*, ui_map::UIMap,
+    coords::*,
+    history::History,
+    pointer_state::PointerState,
+    predefined::{Id, IdI32},
+    style_display::DisplayState,
+    texture_manager::*,
+    tool_trait::*,
+    ui_map::UIMap,
 };
 
 pub type StepId = usize;
 pub struct CanvasManager {
     pub data: CanvasData,
     // ui_window_was_updated: bool,
-    current_tool: ToolId,
-    tools: Tools,
+    pub current_tool: ToolId,
+    pub tools: Tools,
+    previous_tool: Option<ToolId>,
 }
 /// data to pass to tools and save to config
 ///
@@ -25,28 +32,35 @@ pub struct CanvasData {
     pub screen_pos: XY,
     pub screen_zoom: f32,
     pub targeted_ui_texture: usize,
-    pub targeted_ui_element: usize,
+    pub targeted_ui_element: IdI32,
     pub history: History,
 }
+const BIG_CANVAS: i32 = 10_000;
 impl CanvasManager {
-    pub fn new(texture_manager: &mut TextureManager, ui_map: &mut UIMap, window_id: usize) -> Self {
-        let targeted_ui_texture = texture_manager.init_mut_texture(None);
-        let draw_win_display = ui_map.display_mut(window_id).as_mut().unwrap().states_data
-            [DisplayState::Idle as usize]
+    pub fn new(texture_manager: &mut TextureManager, ui_map: &mut UIMap, window_id: IdI32) -> Self {
+        let targeted_ui_texture = texture_manager.init_open_texture(None);
+        let draw_win_display = ui_map.displays[window_id as usize]
+            .as_mut()
+            .unwrap()
+            .states_data[DisplayState::Idle as usize]
             .as_mut()
             .unwrap();
         *draw_win_display = draw_win_display.open_texture(targeted_ui_texture);
         Self {
             data: CanvasData {
-                screen_pos: XY::new(100, 100),
-                transform: XYWH::new(0, 0, 400, 300),
-                history: History::new(),
+                // screen_pos: XY::new(100, 100),
+                // transform: XYWH::new(0, 0, 400, 300),
+                // screen_zoom: 1.0,
                 screen_zoom: 1.0,
+                screen_pos: XY::new(BIG_CANVAS / -2, BIG_CANVAS / -2),
+                transform: XYWH::new(0, 0, BIG_CANVAS, BIG_CANVAS),
+                history: History::new(),
                 targeted_ui_texture,
                 targeted_ui_element: window_id,
             },
             // ui_window_was_updated: true,
             current_tool: ToolId::Brush,
+            previous_tool: None,
             tools: Tools::init_all_tools(),
         }
     }
@@ -57,15 +71,17 @@ impl CanvasManager {
         canvas: &mut Canvas<Window>,
         textures: &mut TextureManager,
     ) {
-        let draw_win_transform = ui_map.element(self.data.targeted_ui_element).transform;
+        // d!(self.data.screen_pos);
+        // d!(self.data.screen_zoom);
+        // dl!(self.data.transform);
+        let draw_win_transform = ui_map.elements[self.data.targeted_ui_element as usize].transform;
 
-        // self.tools[self.current_tool].process_stroke(&mut self.data, pointer, canvas, textures);
         match self.current_tool {
             ToolId::Brush => {
                 let stroke_at = pointer
                     .pos
+                    .substract(draw_win_transform.xy())
                     .transform_from(self.data.screen_zoom, self.data.screen_pos);
-
                 self.tools.brush.process_stroke(
                     &mut self.data,
                     pointer,
@@ -82,21 +98,20 @@ impl CanvasManager {
 
         //draw to buffer
         let ui_tex_id = self.data.targeted_ui_texture;
-        let ui_tex = textures.open_texture_mut(ui_tex_id);
-        // if self.ui_window_was_updated {
-        let src_dst = self.calc_canvas_pos(draw_win_transform);
+        let ui_tex = &mut textures.open_textures[ui_tex_id];
+        let dst = self.calc_canvas_pos(draw_win_transform.wh());
+
         // this is just a buffer texture to be copied to draw_window directly
-        ui_tex.src = Some(src_dst.1.to_rect());
-        ui_tex.dst = Some(src_dst.1.to_rect());
+        ui_tex.src = Some(dst);
+        ui_tex.dst = Some(dst);
+
         let _ = canvas.with_texture_canvas(&mut ui_tex.texture, |c| {
             c.set_draw_color(Color::RGB(20, 20, 20));
-            let _ = c.fill_rect(src_dst.1.to_rect());
+            let _ = c.fill_rect(dst.to_rect());
         });
         self.data
             .history
-            .full_draw(canvas, textures, &self.data, src_dst.0, src_dst.1);
-        // self.ui_window_was_updated = false;
-        // }
+            .full_draw(canvas, textures, &self.data, dst);
     }
     pub fn change_tool(&mut self, tool_id: ToolId) {
         self.current_tool = tool_id;
@@ -113,42 +128,38 @@ impl CanvasManager {
         };
         // self.ui_window_was_updated = true;
     }
-    fn calc_canvas_pos(&mut self, ui_pos: XYWH) -> (XYWH, XYWH) {
-        // let coords = XYWH::new(
-        //     self.data.screen_pos.x,
-        //     self.data.screen_pos.y,
-        //     (self.data.transform.w as f32 * self.data.screen_zoom) as i32,
-        //     (self.data.transform.h as f32 * self.data.screen_zoom) as i32,
-        // );
+    fn calc_canvas_pos(&mut self, ui_size: WH) -> XYWH {
         let to_ui_space = self
             .data
             .transform
             .transform_into(self.data.screen_zoom, self.data.screen_pos);
 
-        let ui_overlap = to_ui_space.get_overlap(ui_pos);
-        // let overlap_w = min(ui_pos.w, coords.x + coords.w) - max(0, coords.x);
-        if ui_overlap.w <= 0 {
-            return (XYWH::new(0, 0, 0, 0), XYWH::new(0, 0, 0, 0));
+        to_ui_space.get_overlap(ui_size)
+    }
+    pub fn try_hold_tool(&mut self, tool_id: ToolId, hold_in: bool) {
+        if hold_in && self.current_tool != tool_id && self.previous_tool.is_none() {
+            self.previous_tool = Some(self.current_tool);
+            self.current_tool = tool_id;
+        } else if !hold_in && self.current_tool == tool_id && self.previous_tool.is_some() {
+            self.current_tool = self.previous_tool.unwrap();
+            self.previous_tool = None;
         }
-        // let overlap.h = min(ui_pos.h, coords.y + coords.h) - max(0, coords.y);
-        if ui_overlap.h <= 0 {
-            return (XYWH::new(0, 0, 0, 0), XYWH::new(0, 0, 0, 0));
-        }
-        let dst = ui_overlap;
+    }
 
-        let src = XYWH::new(
-            -min(0, self.data.screen_pos.x),
-            -min(0, self.data.screen_pos.y),
-            (ui_overlap.w as f32 / self.data.screen_zoom) as i32,
-            (ui_overlap.h as f32 / self.data.screen_zoom) as i32,
-        );
-        // let dst = Rect::new(
-        //     ui_pos.x + max(0, coords.x),
-        //     ui_pos.y + max(0, coords.y),
-        //     (overlap_w) as u32,
-        //     (overlap_h) as u32,
-        // );
-        // println!("src: {:?}, dst: {:?}", src, dst,);
-        (src, dst)
+    pub fn undo(&mut self) {
+        if let Some(id) = self.data.history.selected_h_step {
+            if id > 0 {
+                self.data.history.selected_h_step = Some(id - 1);
+            } else {
+                self.data.history.selected_h_step = None;
+            }
+        }
+    }
+    pub fn redo(&mut self) {
+        if let Some(id) = self.data.history.selected_h_step {
+            if id < self.data.history.steps.len() - 1 {
+                self.data.history.selected_h_step = Some(id + 1);
+            }
+        }
     }
 }

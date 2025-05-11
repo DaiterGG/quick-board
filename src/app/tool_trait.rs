@@ -8,6 +8,7 @@ macro_rules! tools{
             $field:ident : $tool:ident
         ),* $(,)?
     ) => {
+        #[derive(Copy, Clone,Eq, PartialEq)]
         pub enum ToolId{
             $(
                 $tool,

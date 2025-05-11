@@ -6,6 +6,7 @@ macro_rules! markup {
             $variant:ident : $type:ident [ $($child:ident),* ]
         ),* $(,)?
     ) => {
+        #[derive(Copy, Clone, Debug, Eq, PartialEq)]
         pub enum Id{
             $($variant,)*
             Total,
@@ -19,8 +20,8 @@ macro_rules! markup {
                 $(
                     vec.push(UIElement::new(
                         ElementType::$type,
-                        Id::$variant as usize,
-                        vec![ $( Id::$child as usize, )* ]
+                        Id::$variant as i32,
+                        vec![ $( Id::$child as i32, )* ]
                     ));
                 )*
                 vec
@@ -30,7 +31,7 @@ macro_rules! markup {
 }
 pub const ID_COUNT: usize = Id::Total as usize;
 
-pub type IdUsize = usize;
+pub type IdI32 = i32;
 // impl Id {
 //     pub const fn as_usize(id: Id) -> IdUsize {
 //         id as IdUsize

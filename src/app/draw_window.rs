@@ -1,15 +1,9 @@
-use super::{
-    action_pump::{Action, ActionPump},
-    coords::XY,
-    pointer_state::{self, ButtonState, PointerState},
-    predefined::{Id, IdUsize},
-    ui_element::UIElement,
-};
+use super::{action_pump::*, pointer_state::*, predefined::*, ui_element::UIElement};
 
 pub struct DrawWindow;
 impl DrawWindow {
     pub fn before_collision(
-        id: IdUsize,
+        id: IdI32,
         element: &UIElement,
         actions: &mut ActionPump,
         pointer: &mut PointerState,
@@ -18,9 +12,9 @@ impl DrawWindow {
         if was_hit && pointer.left == ButtonState::Pressed {
             pointer.interacting_with = Some(id);
         }
-        if !was_hit && pointer.interacting_with == Some(id) {
-            pointer.interacting_with = None;
-        }
+        // if !was_hit && pointer.interacting_with == Some(id) {
+        //     pointer.interacting_with = None;
+        // }
         // if pointer.interacting_with == Some(id) {
         //     let canvas_hit = XY {
         //         x: pointer.pos.x - element.transform.x,

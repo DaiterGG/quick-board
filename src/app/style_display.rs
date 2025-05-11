@@ -4,6 +4,7 @@ use sdl2::pixels::Color;
 use sdl2::rect::Rect;
 use sdl2::render::BlendMode::Blend;
 use sdl2::render::*;
+use sdl2::surface;
 use sdl2::video::Window;
 
 use super::color_map::*;
@@ -103,7 +104,7 @@ pub struct DisplayData {
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 enum TexId {
     Locked(LockedTexId),
-    Open(usize),
+    Open(i32),
     None,
 }
 // impl Clone for DisplayData {
@@ -159,7 +160,7 @@ impl DisplayData {
         self
     }
     pub fn open_texture(mut self, id: usize) -> Self {
-        self.texture_id = TexId::Open(id);
+        self.texture_id = TexId::Open(id as i32);
         self
     }
     pub fn radius(mut self, radius: u8) -> Self {
@@ -188,14 +189,23 @@ impl DisplayData {
             //     let _ = canvas.copy(&data.texture, data.src, dst);
             // }
             TexId::Open(id) => {
-                let data = textures.open_texture(id);
+                let data = &textures.open_textures[id as usize];
                 let dst = if let Some(dst) = data.dst {
-                    Some(dst)
+                    Some(Rect::new(
+                        element_pos.x + dst.x,
+                        element_pos.y + dst.y,
+                        dst.w as u32,
+                        dst.h as u32,
+                    ))
                 } else {
                     Some(element_pos.to_rect())
                 };
-                // println!("{:?},{:?}", data.src, dst);
-                let _ = canvas.copy(&data.texture, data.src, dst);
+                let src = if let Some(src) = data.src {
+                    Some(src.to_rect())
+                } else {
+                    None
+                };
+                let _ = canvas.copy(&data.texture, src, dst);
             }
             _ => {}
         }

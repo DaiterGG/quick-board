@@ -14,6 +14,9 @@ pub enum Align {
         pivot: XY,
         align_by: XY,
         size: (Value, Value),
+        // size: (i32, i32),
+        // b1: bool,
+        // b1: bool,
     },
 }
 
