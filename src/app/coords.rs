@@ -8,8 +8,11 @@ pub struct WH {
     pub h: i32,
 }
 impl WH {
-    pub fn new(w: i32, h: i32) -> Self {
+    pub fn new(w: i32, h: i32) -> WH {
         WH { w, h }
+    }
+    pub fn new_one(wh: i32) -> WH {
+        WH { w: wh, h: wh }
     }
 }
 #[derive(Copy, Clone, Debug)]
@@ -49,6 +52,12 @@ impl XY {
             h: min(self.y + wh, other.y + other.h) - y,
         }
     }
+    pub fn substract_one(&self, other: i32) -> XY {
+        XY {
+            x: self.x - other,
+            y: self.y - other,
+        }
+    }
     pub fn substract(&self, other: XY) -> XY {
         XY {
             x: self.x - other.x,
@@ -75,6 +84,22 @@ impl XY {
             xb: self.x + x,
             ya: self.y - y,
             yb: self.y + y,
+        }
+    }
+    pub fn to_tr_one(&self, wh: i32) -> XYWH {
+        XYWH {
+            x: self.x,
+            y: self.y,
+            w: wh,
+            h: wh,
+        }
+    }
+    pub fn to_tr(&self, wh: WH) -> XYWH {
+        XYWH {
+            x: self.x,
+            y: self.y,
+            w: wh.w,
+            h: wh.h,
         }
     }
 }

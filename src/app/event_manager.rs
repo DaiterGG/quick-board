@@ -57,6 +57,8 @@ impl EventManager {
                     Some(Keycode::Space) => {
                         action_pump.add(HoldTool(ToolId::Move, false));
                     }
+                    Some(Keycode::LShift) => self.shift_pressed = false,
+                    Some(Keycode::LCtrl) => self.ctrl_pressed = false,
                     _ => {}
                 },
                 Event::KeyDown { keycode, .. } => match keycode {
@@ -72,9 +74,11 @@ impl EventManager {
                         action_pump.add(BrushSize(false));
                     }
                     Some(Keycode::Z) if self.ctrl_pressed && !self.shift_pressed => {
+                        dl!("Z ctrl");
                         action_pump.add(Undo);
                     }
                     Some(Keycode::Z) if self.ctrl_pressed && self.shift_pressed => {
+                        dl!("Z");
                         action_pump.add(Redo);
                     }
                     _ => {}

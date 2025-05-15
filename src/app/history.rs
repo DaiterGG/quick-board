@@ -26,19 +26,22 @@ impl History {
     }
     pub fn selected_step_mut(&mut self) -> &mut HistoryStep {
         if self.selected_h_step.is_none() {
+            println!("{}", self.steps.len());
             self.add_step();
         }
         &mut self.steps[self.selected_h_step.unwrap()]
     }
     pub fn add_step(&mut self) {
         let current_layer_id = self.selected_layer.unwrap_or(self.add_layer());
-        dl!(self.layers.len());
         let current_layer = &mut self.layers[current_layer_id];
 
-        if let Some(id) = self.selected_h_step {
-            if id < self.steps.len() - 1 {
-                self.steps.truncate(id + 1);
-            }
+        let id = if let Some(id) = self.selected_h_step {
+            id as i32
+        } else {
+            -1
+        };
+        if id < (self.steps.len() as i32) - 1 {
+            self.steps.truncate((id + 1) as usize);
         }
         let new_id = self.steps.len();
 
@@ -69,13 +72,7 @@ impl History {
         self.selected_layer = Some(insert_index);
         insert_index
     }
-    pub fn full_draw(
-        &self,
-        canvas: &mut Canvas<Window>,
-        t_manager: &mut TextureManager,
-        data: &CanvasData,
-        dst: XYWH,
-    ) {
+    pub fn full_draw(&self, t_manager: &mut TextureManager, data: &CanvasData, dst: XYWH) {
         if self.selected_h_step.is_none() {
             return;
         }
@@ -87,13 +84,13 @@ impl History {
         );
         for step_id in 0..(self.selected_h_step.unwrap() + 1) {
             if data.transform.w > 10_000 || data.transform.h > 10_000 {
-                self.steps[step_id].full_draw_double(canvas, t_manager, data, src, dst);
+                self.steps[step_id].full_draw_double(t_manager, data, src, dst);
             } else {
-                self.steps[step_id].full_draw(canvas, t_manager, data, src, dst);
+                self.steps[step_id].full_draw(t_manager, data, src, dst);
             }
         }
     }
-    pub fn finish_step(&mut self, t_manager: &mut TextureManager, canvas: &mut Canvas<Window>) {
-        self.steps[self.selected_h_step.unwrap()].make_static(t_manager, canvas);
+    pub fn finish_step(&mut self, t_manager: &mut TextureManager) {
+        self.steps[self.selected_h_step.unwrap()].make_static(t_manager);
     }
 }

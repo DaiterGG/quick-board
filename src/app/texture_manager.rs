@@ -16,11 +16,12 @@ pub enum LockedTexId {
     IconBrush,
     Total,
 }
-pub const DRAW_TEX_SIZE: u32 = 256;
+pub const DRAW_TEX_SIZE: u32 = 512;
 pub const DRAW_TEX_SIZE_I32: i32 = DRAW_TEX_SIZE as i32;
 pub struct TextureManager {
-    t_creator: TextureCreator<WindowContext>,
-    biggest_possible_resolution: WH,
+    pub t_creator: TextureCreator<WindowContext>,
+    pub biggest_possible_resolution: WH,
+    pub canvas: Canvas<Window>,
     // icons
     pub locked_textures: [Option<TextureData>; LockedTexId::Total as usize],
     // draw_canvas buffer, previews, displays
@@ -33,12 +34,19 @@ pub struct TextureManager {
     pub unused_static_textures: Vec<usize>,
 }
 impl TextureManager {
-    pub fn new(t_creator: TextureCreator<WindowContext>, video_subsystem: &VideoSubsystem) -> Self {
+    pub fn new(video_subsystem: &VideoSubsystem, window: Window) -> Self {
+        let canvas: Canvas<Window> = CanvasBuilder::new(window)
+            .build()
+            .expect("Failed to create canvas");
+
+        println!("Using SDL_Renderer \"{}\"", canvas.info().name);
+        let t_creator: TextureCreator<WindowContext> = canvas.texture_creator();
         let big = Self::init_biggest_possible_display_res(video_subsystem);
         let mut p = [const { None }; LockedTexId::Total as usize];
         p[LockedTexId::IconBrush as usize] = TextureData::some(&t_creator, WH::new(32, 32));
 
         Self {
+            canvas,
             t_creator,
             biggest_possible_resolution: big,
             locked_textures: p,
@@ -80,16 +88,8 @@ impl TextureManager {
         &mut self.open_textures[id]
     }
     /// * `size`: None - use biggest possible resolution of the pc for safety
-    pub fn init_open_texture(&mut self, size: Option<WH>) -> usize {
-        if let Some(s) = size {
-            self.open_textures
-                .push(TextureData::new(&self.t_creator, s));
-        } else {
-            self.open_textures.push(TextureData::new(
-                &self.t_creator,
-                self.biggest_possible_resolution,
-            ));
-        }
+    pub fn init_open_texture(&mut self, texture_data: TextureData) -> usize {
+        self.open_textures.push(texture_data);
         self.open_textures.len() - 1
     }
     pub fn destroy_open_texture(&mut self, id: usize) {
@@ -97,9 +97,6 @@ impl TextureManager {
             let data = self.open_textures.remove(id);
             data.texture.destroy();
         }
-    }
-    pub fn draw_texture(&mut self, id: usize) -> &mut Texture {
-        &mut self.draw_textures[id]
     }
     pub fn init_target_texture(&mut self) -> usize {
         if self.unused_target_textures.len() > 0 {
@@ -111,14 +108,14 @@ impl TextureManager {
         if self.unused_static_textures.len() > 0 {
             return self.unused_static_textures.pop().unwrap();
         }
-        self.new_target_texture()
+        self.new_static_texture()
     }
-    pub fn make_static(&mut self, target_id: usize, canvas: &mut Canvas<Window>) {
+    pub fn make_static(&mut self, target_id: usize) {
         let stat_id = self.init_static_texture();
-        let mut target = &mut self.draw_textures[target_id];
+        let target = &mut self.draw_textures[target_id];
         let mut pixel_data = Vec::new();
-        canvas
-            .with_texture_canvas(&mut target, |c| {
+        self.canvas
+            .with_texture_canvas(target, |c| {
                 pixel_data = c.read_pixels(None, PixelFormatEnum::RGBA8888).unwrap();
                 c.set_draw_color(Color::RGBA(0, 0, 0, 0));
                 c.clear();
@@ -126,7 +123,7 @@ impl TextureManager {
             .expect("Failed to read pixels");
 
         let stat = &mut self.draw_textures[stat_id];
-        stat.update(None, pixel_data.as_slice(), 256 * 4)
+        stat.update(None, pixel_data.as_slice(), DRAW_TEX_SIZE as usize * 4)
             .expect("Failed to update static texture");
 
         self.draw_textures.swap(target_id, stat_id);

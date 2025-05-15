@@ -1,6 +1,10 @@
 use std::{cmp::*, io::copy, time::*};
 
-use sdl2::{rect::Rect, render::*, video::Window};
+use sdl2::{
+    rect::{FRect, Rect},
+    render::*,
+    video::Window,
+};
 
 use crate::*;
 
@@ -61,12 +65,14 @@ impl HistoryStep {
     pub fn get_textures(
         &mut self,
         bound: XXYY,
+        canvas_transform: XYWH,
         t_manager: &mut TextureManager,
     ) -> Vec<TextureUnit> {
-        let left_id = coord_to_id(bound.xa);
-        let right_id = coord_to_id(bound.xb);
-        let up_id = coord_to_id(bound.ya);
-        let down_id = coord_to_id(bound.yb);
+        let canvas_bound = canvas_transform.to_bound();
+        let left_id = coord_to_id(max(bound.xa, canvas_bound.xa));
+        let right_id = coord_to_id(min(bound.xb, canvas_bound.xb));
+        let up_id = coord_to_id(max(bound.ya, canvas_bound.ya));
+        let down_id = coord_to_id(min(bound.yb, canvas_bound.yb));
         let mut vec = Vec::new();
 
         for id in up_id..(down_id + 1) {
@@ -124,7 +130,6 @@ impl HistoryStep {
     // NOTE: num crate for Float generic (pretty useless)
     pub fn full_draw_double(
         &self,
-        canvas: &mut Canvas<Window>,
         t_manager: &mut TextureManager,
         data: &CanvasData,
         src: XYWH,
@@ -173,7 +178,7 @@ impl HistoryStep {
                 (next_y.round() - y_r) as u32,
             );
 
-            let _ = canvas.with_texture_canvas(ui_tex, |c| {
+            let _ = t_manager.canvas.with_texture_canvas(ui_tex, |c| {
                 let _ = c.copy(tex, unit_src, unit_dst);
                 ()
             });
@@ -181,7 +186,6 @@ impl HistoryStep {
     }
     pub fn full_draw(
         &self,
-        canvas: &mut Canvas<Window>,
         t_manager: &mut TextureManager,
         data: &CanvasData,
         src: XYWH,
@@ -220,27 +224,18 @@ impl HistoryStep {
                 (overlap_h / data.screen_zoom).round() as u32,
             );
 
-            let next_x = overlap_x + overlap_w;
-            let next_y = overlap_y + overlap_h;
-            let x_r = overlap_x.round();
-            let y_r = overlap_y.round();
+            let unit_dst = FRect::new(overlap_x, overlap_y, overlap_w, overlap_h);
 
-            let unit_dst = Rect::new(
-                x_r as i32,
-                y_r as i32,
-                (next_x.round() - x_r) as u32,
-                (next_y.round() - y_r) as u32,
-            );
-
-            canvas
-                .with_texture_canvas(ui_tex, |c| c.copy(tex, unit_src, unit_dst).unwrap())
+            t_manager
+                .canvas
+                .with_texture_canvas(ui_tex, |c| c.copy_f(tex, unit_src, unit_dst).unwrap())
                 .unwrap();
         }
     }
-    pub fn make_static(&mut self, t_manager: &mut TextureManager, canvas: &mut Canvas<Window>) {
+    pub fn make_static(&mut self, t_manager: &mut TextureManager) {
         for i in 0..self.flat_copy.len() {
             let unit = self.flat_copy[i];
-            t_manager.make_static(unit.id, canvas);
+            t_manager.make_static(unit.id);
         }
     }
 }
@@ -303,6 +298,7 @@ impl TextureRow {
                     id: t_manager.init_target_texture(),
                     origin: XY::new(id_to_coord(id), id_to_coord(row_id)),
                 };
+                println!("init id: {}, {}", id_to_coord(id), id_to_coord(row_id));
                 self.units[true_id as usize] = Some(unit);
                 flat.push(unit);
 
@@ -340,6 +336,8 @@ impl TextureRow {
     //     }
     // }
 }
+
+//DRAW_TEX_SIZE = 256
 // 0 -> 0, 255 -> 0, 256 -> 1
 // -256 -> -1, -257 -> -2
 fn coord_to_id(coord: i32) -> i32 {
@@ -363,15 +361,15 @@ mod tests {
     #[test]
     fn test_coord_to_id() {
         assert_eq!(coord_to_id(0), 0);
-        assert_eq!(coord_to_id(255), 0);
-        assert_eq!(coord_to_id(256), 1);
-        assert_eq!(coord_to_id(-256), -1);
-        assert_eq!(coord_to_id(-257), -2);
+        assert_eq!(coord_to_id(DRAW_TEX_SIZE_I32 - 1), 0);
+        assert_eq!(coord_to_id(DRAW_TEX_SIZE_I32), 1);
+        assert_eq!(coord_to_id(-DRAW_TEX_SIZE_I32), -1);
+        assert_eq!(coord_to_id(-DRAW_TEX_SIZE_I32 - 1), -2);
     }
     #[test]
     fn test_id_to_coord() {
         assert_eq!(id_to_coord(0), 0);
-        assert_eq!(id_to_coord(1), 256);
-        assert_eq!(id_to_coord(-1), -256);
+        assert_eq!(id_to_coord(1), DRAW_TEX_SIZE_I32);
+        assert_eq!(id_to_coord(-1), -DRAW_TEX_SIZE_I32);
     }
 }

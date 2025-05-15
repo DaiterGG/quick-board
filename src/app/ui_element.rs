@@ -24,19 +24,19 @@ impl UIElement {
             transform: XYWH::zero(),
         }
     }
-    pub fn draw_to(&self, canvas: &mut Canvas<Window>, styles: &UIMap, textures: &TextureManager) {
+    pub fn draw_to(&self, styles: &UIMap, textures: &mut TextureManager) {
         let dis = &styles.displays[self.id as usize];
         let color = &styles.colors;
 
         dis.as_ref()
-            .inspect(|d| d.draw(self.transform, false, canvas, color, textures));
+            .inspect(|d| d.draw(self.transform, false, color, textures));
 
         for i in 0..self.childrens.len() {
-            styles.elements[self.childrens[i] as usize].draw_to(canvas, styles, textures);
+            styles.elements[self.childrens[i] as usize].draw_to(styles, textures);
         }
 
         dis.as_ref()
-            .inspect(|d| d.draw(self.transform, true, canvas, color, textures));
+            .inspect(|d| d.draw(self.transform, true, color, textures));
     }
 }
 // #[cfg(test)]

@@ -73,9 +73,8 @@ impl Display {
         &self,
         pos: XYWH,
         at_front: bool,
-        canvas: &mut Canvas<Window>,
         colors: &ColorMap,
-        textures: &TextureManager,
+        textures: &mut TextureManager,
     ) {
         // println!("{:?}", self.active_states);
         // println!("{:?}", self.states_data);
@@ -85,7 +84,7 @@ impl Display {
                     if data.draw_at_front != at_front {
                         continue;
                     }
-                    data.draw(pos, canvas, colors, textures);
+                    data.draw(pos, colors, textures);
                 }
             }
         }
@@ -167,15 +166,9 @@ impl DisplayData {
         self.edge_radius = radius;
         self
     }
-    fn draw(
-        &self,
-        element_pos: XYWH,
-        canvas: &mut Canvas<Window>,
-        colors: &ColorMap,
-        textures: &TextureManager,
-    ) {
+    fn draw(&self, element_pos: XYWH, colors: &ColorMap, textures: &mut TextureManager) {
         if let Some(main) = self.color {
-            main.apply(canvas, colors, element_pos);
+            main.apply(&mut textures.canvas, colors, element_pos);
         }
 
         match self.texture_id {
@@ -205,13 +198,13 @@ impl DisplayData {
                 } else {
                     None
                 };
-                let _ = canvas.copy(&data.texture, src, dst);
+                let _ = textures.canvas.copy(&data.texture, src, dst);
             }
             _ => {}
         }
 
         if let Some(sub) = self.sub_color {
-            sub.apply(canvas, colors, element_pos);
+            sub.apply(&mut textures.canvas, colors, element_pos);
         }
         // TODO: Draw border
         // canvas.rect(
@@ -238,7 +231,7 @@ impl ColorDisplay {
     pub fn with_alfa(color: ColorTag, alfa: u8) -> Self {
         Self { color, alfa }
     }
-    pub fn apply<T: RenderTarget>(&self, canvas: &mut Canvas<T>, colors: &ColorMap, pos: XYWH) {
+    pub fn apply(&self, canvas: &mut Canvas<Window>, colors: &ColorMap, pos: XYWH) {
         let mut rgba: Color = colors.get(self.color);
         rgba.a = self.alfa as u8;
         canvas.set_draw_color(rgba);

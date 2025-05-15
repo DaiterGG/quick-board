@@ -1,11 +1,15 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+extern crate indices;
 extern crate sdl2;
 
 mod app;
 mod debug;
 
-use std::{env, time::Duration};
+use std::{
+    env,
+    time::{Duration, Instant},
+};
 
 use app::{
     action_pump::ActionPump, canvas_manager::CanvasManager, coords::WH,
@@ -46,21 +50,11 @@ pub fn main() -> Result<(), String> {
         h: ws.1 as i32,
     };
 
-    let mut canvas: Canvas<Window> = CanvasBuilder::new(window)
-        // .present_vsync()
-        .build()
-        .map_err(|e| e.to_string())?;
-
-    println!("Using SDL_Renderer \"{}\"", canvas.info().name);
-    let t_creator: TextureCreator<WindowContext> = canvas.texture_creator();
-
-    // WindowState::new(sdl, video_subsystem, canvas, t_creator),
-
     let mut pointer = PointerState::new();
     let mut ui_manager = UIManager::new(window_size);
     let mut actions = ActionPump::new();
     // TODO: move video_subsystem to texture manager
-    let mut texture_manager = TextureManager::new(t_creator, &video_subsystem);
+    let mut texture_manager = TextureManager::new(&video_subsystem, window);
     let mut ui_map = UIMap::new();
     let mut canvas_manager =
         CanvasManager::new(&mut texture_manager, &mut ui_map, Id::DrawWindow as i32);
@@ -77,9 +71,9 @@ pub fn main() -> Result<(), String> {
     // let mut fps = FPSManager::new();
     // println!("err {:?}", fps.set_framerate(200));
 
-    let mut time = std::time::Instant::now();
-    let mut last_frame = std::time::Instant::now();
-    let mut lazy_buffer = std::time::Instant::now();
+    let mut time = Instant::now();
+    let mut last_frame = Instant::now();
+    let mut lazy_buffer = Instant::now();
     let mut frames = 0;
     'main: loop {
         // Get the input and updates from user
@@ -92,16 +86,16 @@ pub fn main() -> Result<(), String> {
         ui_manager.pointer_collision(&mut pointer, &mut actions, &mut ui_map);
 
         // Apply the actions, registered by the user
-        actions.apply(&mut canvas_manager, &pointer);
+        actions.apply(&mut canvas_manager, &pointer, &mut texture_manager);
 
         // Update the UI layout if nessesary
         ui_manager.update(&mut ui_map);
 
         // Update canvas, if layout changed, use tool if needed
-        canvas_manager.update(&pointer, &mut ui_map, &mut canvas, &mut texture_manager);
+        canvas_manager.update(&pointer, &mut ui_map, &mut texture_manager);
 
         // Draw the UI
-        ui_manager.draw_ui(&mut canvas, &ui_map, &texture_manager);
+        ui_manager.draw_ui(&ui_map, &mut texture_manager);
 
         //tell the data, that the frame is over
         pointer.reset();
@@ -109,7 +103,7 @@ pub fn main() -> Result<(), String> {
         // buffer draw textures
         if lazy_buffer.elapsed() >= Duration::from_millis(20) {
             texture_manager.buffer_draw_texture();
-            lazy_buffer = std::time::Instant::now();
+            lazy_buffer = Instant::now();
         }
 
         // std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 200));
@@ -123,10 +117,11 @@ pub fn main() -> Result<(), String> {
             std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 1000) - elapsed);
         }
         // fps counter
-        last_frame = std::time::Instant::now();
+        last_frame = Instant::now();
         if time.elapsed() >= Duration::from_secs(5) {
+            print!("draw_textures: {}, ", texture_manager.draw_textures.len());
             println!("fps: {}", frames / 5);
-            time = std::time::Instant::now();
+            time = Instant::now();
             frames = 0;
         }
     }

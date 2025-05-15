@@ -3,6 +3,7 @@ use super::pointer_state::PointerState;
 use super::predefined::*;
 
 use super::canvas_manager::CanvasManager;
+use super::texture_manager::TextureManager;
 use super::tool_trait::ToolId;
 use std::mem::replace;
 
@@ -30,7 +31,12 @@ impl ActionPump {
     pub fn get_and_clear(&mut self) -> Vec<Action> {
         replace(&mut self.actions, Vec::new())
     }
-    pub fn apply(&mut self, canvas_manager: &mut CanvasManager, pointer: &PointerState) {
+    pub fn apply(
+        &mut self,
+        canvas_manager: &mut CanvasManager,
+        pointer: &PointerState,
+        t_manager: &mut TextureManager,
+    ) {
         let actions = self.get_and_clear();
         use Action::*;
         for action in actions {
@@ -44,7 +50,10 @@ impl ActionPump {
                 HoldTool(id, hold_in) => canvas_manager.try_hold_tool(id, hold_in),
                 Undo => canvas_manager.undo(),
                 Redo => canvas_manager.redo(),
-                BrushSize(increase) => canvas_manager.tools.brush.change_brush_size(increase),
+                BrushSize(increase) => canvas_manager
+                    .tools
+                    .brush
+                    .change_brush_size(increase, t_manager),
                 _ => (),
             }
         }

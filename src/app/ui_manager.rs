@@ -145,18 +145,18 @@ impl UIManager {
         hit
     }
     /// called once per frame
-    pub fn draw_ui(&self, canvas: &mut Canvas<Window>, ui_map: &UIMap, textures: &TextureManager) {
-        canvas.set_draw_color(Color::RGB(14, 14, 14));
+    pub fn draw_ui(&self, ui_map: &UIMap, t_manager: &mut TextureManager) {
+        t_manager.canvas.set_draw_color(Color::RGB(14, 14, 14));
         // canvas.set_draw_color(Color::RGB(14, 14, 14));
-        canvas.clear();
+        t_manager.canvas.clear();
 
         // let dis = self.styles.get_display(self.layers[0].id);
         // dis.inspect(|d| println!("{:?}", d.active_states));
 
         for i in 0..self.layers.len() {
-            ui_map.elements[self.layers[i] as usize].draw_to(canvas, ui_map, textures);
+            ui_map.elements[self.layers[i] as usize].draw_to(ui_map, t_manager);
         }
 
-        canvas.present();
+        t_manager.canvas.present();
     }
 }

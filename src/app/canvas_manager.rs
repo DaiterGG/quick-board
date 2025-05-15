@@ -1,3 +1,4 @@
+use app::texture_data::TextureData;
 use sdl2::{pixels::Color, rect::Rect, render::*, video::Window};
 
 use crate::*;
@@ -37,8 +38,12 @@ pub struct CanvasData {
 }
 const BIG_CANVAS: i32 = 10_000;
 impl CanvasManager {
-    pub fn new(texture_manager: &mut TextureManager, ui_map: &mut UIMap, window_id: IdI32) -> Self {
-        let targeted_ui_texture = texture_manager.init_open_texture(None);
+    pub fn new(t_manager: &mut TextureManager, ui_map: &mut UIMap, window_id: IdI32) -> Self {
+        let targeted_ui_texture = t_manager.init_open_texture(TextureData::new(
+            &t_manager.t_creator,
+            t_manager.biggest_possible_resolution,
+            None,
+        ));
         let draw_win_display = ui_map.displays[window_id as usize]
             .as_mut()
             .unwrap()
@@ -61,14 +66,13 @@ impl CanvasManager {
             // ui_window_was_updated: true,
             current_tool: ToolId::Brush,
             previous_tool: None,
-            tools: Tools::init_all_tools(),
+            tools: Tools::init_all_tools(t_manager),
         }
     }
     pub fn update(
         &mut self,
         pointer: &PointerState,
         ui_map: &mut UIMap,
-        canvas: &mut Canvas<Window>,
         textures: &mut TextureManager,
     ) {
         // d!(self.data.screen_pos);
@@ -82,13 +86,9 @@ impl CanvasManager {
                     .pos
                     .substract(draw_win_transform.xy())
                     .transform_from(self.data.screen_zoom, self.data.screen_pos);
-                self.tools.brush.process_stroke(
-                    &mut self.data,
-                    pointer,
-                    stroke_at,
-                    canvas,
-                    textures,
-                );
+                self.tools
+                    .brush
+                    .process_stroke(&mut self.data, pointer, stroke_at, textures);
             }
             ToolId::Move => {
                 self.tools.move_tool.process_stroke(&mut self.data, pointer);
@@ -105,13 +105,13 @@ impl CanvasManager {
         ui_tex.src = Some(dst);
         ui_tex.dst = Some(dst);
 
-        let _ = canvas.with_texture_canvas(&mut ui_tex.texture, |c| {
-            c.set_draw_color(Color::RGB(20, 20, 20));
-            let _ = c.fill_rect(dst.to_rect());
-        });
-        self.data
-            .history
-            .full_draw(canvas, textures, &self.data, dst);
+        let _ = textures
+            .canvas
+            .with_texture_canvas(&mut ui_tex.texture, |c| {
+                c.set_draw_color(Color::RGB(20, 20, 20));
+                let _ = c.fill_rect(dst.to_rect());
+            });
+        self.data.history.full_draw(textures, &self.data, dst);
     }
     pub fn change_tool(&mut self, tool_id: ToolId) {
         self.current_tool = tool_id;
@@ -147,6 +147,7 @@ impl CanvasManager {
     }
 
     pub fn undo(&mut self) {
+        dl!(self.data.history.selected_h_step);
         if let Some(id) = self.data.history.selected_h_step {
             if id > 0 {
                 self.data.history.selected_h_step = Some(id - 1);
@@ -160,6 +161,8 @@ impl CanvasManager {
             if id < self.data.history.steps.len() - 1 {
                 self.data.history.selected_h_step = Some(id + 1);
             }
+        } else {
+            self.data.history.selected_h_step = Some(0);
         }
     }
 }
