@@ -6,17 +6,14 @@ extern crate sdl2;
 mod app;
 mod debug;
 
-use std::{
-    env,
-    time::{Duration, Instant},
-};
+use std::{env, time::*};
 
 use app::{
-    action_pump::ActionPump, canvas_manager::CanvasManager, coords::WH,
-    event_manager::EventManager, pointer_state::PointerState, predefined::Id, texture_manager::*,
+    action_pump::ActionPump, canvas_manager::CanvasManager, coords::WH, cursor::CanvasCursor,
+    event_manager::EventManager, input_state::InputState, predefined::Id, texture_manager::*,
     ui_manager::UIManager, ui_map::UIMap,
 };
-use sdl2::{render::*, video::*};
+use sdl2::{image::*, video::*};
 
 pub fn main() -> Result<(), String> {
     unsafe {
@@ -24,6 +21,7 @@ pub fn main() -> Result<(), String> {
     }
     let sdl = sdl2::init()?;
     let video_subsystem = sdl.video()?;
+    let _image_context = sdl2::image::init(InitFlag::PNG | InitFlag::JPG)?;
     let mut event_manager = EventManager::new(&sdl)?;
     let mut window_size = if let Ok(DisplayMode { w, h, .. }) = video_subsystem.display_mode(0, 0) {
         WH {
@@ -50,7 +48,7 @@ pub fn main() -> Result<(), String> {
         h: ws.1 as i32,
     };
 
-    let mut pointer = PointerState::new();
+    let mut input = InputState::new();
     let mut ui_manager = UIManager::new(window_size);
     let mut actions = ActionPump::new();
     // TODO: move video_subsystem to texture manager
@@ -59,15 +57,6 @@ pub fn main() -> Result<(), String> {
     let mut canvas_manager =
         CanvasManager::new(&mut texture_manager, &mut ui_map, Id::DrawWindow as i32);
 
-    // canvas.with_texture_canvas(
-    //     &mut texture_manager
-    //         .predefined_mut(TextureId::DrawCanvas)
-    //         .texture,
-    //     |c| {
-    //         c.set_draw_color(Color::RGB(255, 255, 255));
-    //         c.clear();
-    //     },
-    // );
     // let mut fps = FPSManager::new();
     // println!("err {:?}", fps.set_framerate(200));
 
@@ -77,28 +66,33 @@ pub fn main() -> Result<(), String> {
     let mut frames = 0;
     'main: loop {
         // Get the input and updates from user
-        let res = event_manager.handle_events(&mut pointer, &mut ui_manager, &mut actions);
+        let res = event_manager.handle_events(&mut input, &mut ui_manager, &mut actions);
         if res == Ok(true) {
             break 'main;
         }
 
         // Check if user triggered some ui events
-        ui_manager.pointer_collision(&mut pointer, &mut actions, &mut ui_map);
+        ui_manager.pointer_collision(&mut input, &mut actions, &mut ui_map);
 
         // Apply the actions, registered by the user
-        actions.apply(&mut canvas_manager, &pointer, &mut texture_manager);
+        actions.apply(
+            &mut canvas_manager,
+            &mut ui_manager,
+            &input,
+            &mut texture_manager,
+        );
 
         // Update the UI layout if nessesary
         ui_manager.update(&mut ui_map);
 
         // Update canvas, if layout changed, use tool if needed
-        canvas_manager.update(&pointer, &mut ui_map, &mut texture_manager);
+        canvas_manager.update(&input, &mut ui_map, &mut texture_manager);
 
         // Draw the UI
         ui_manager.draw_ui(&ui_map, &mut texture_manager);
 
         //tell the data, that the frame is over
-        pointer.reset();
+        input.reset();
 
         // buffer draw textures
         if lazy_buffer.elapsed() >= Duration::from_millis(20) {
@@ -119,7 +113,6 @@ pub fn main() -> Result<(), String> {
         // fps counter
         last_frame = Instant::now();
         if time.elapsed() >= Duration::from_secs(5) {
-            print!("draw_textures: {}, ", texture_manager.draw_textures.len());
             println!("fps: {}", frames / 5);
             time = Instant::now();
             frames = 0;

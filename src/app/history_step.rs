@@ -15,6 +15,7 @@ pub struct HistoryStep {
     //maintainable onedirectional linked list, to be able
     //to 'walk' on specific layer
     pub next_layer_step: Option<usize>,
+    pub is_static: bool,
     // pub prev_layer_step: Option<usize>,
     rows: Vec<TextureRow>,
     rows_offset: i32,
@@ -25,6 +26,7 @@ pub struct HistoryStep {
 impl HistoryStep {
     pub fn new() -> Self {
         Self {
+            is_static: false,
             // prev_layer_step: None,
             next_layer_step: None,
             rows: Vec::new(),
@@ -166,21 +168,14 @@ impl HistoryStep {
                 (overlap_h / zoom_64).round() as u32,
             );
 
-            let next_x = overlap_x + overlap_w;
-            let next_y = overlap_y + overlap_h;
-            let x_r = overlap_x.round();
-            let y_r = overlap_y.round();
-
-            let unit_dst = Rect::new(
-                x_r as i32,
-                y_r as i32,
-                (next_x.round() - x_r) as u32,
-                (next_y.round() - y_r) as u32,
+            let unit_dst = FRect::new(
+                overlap_x as f32,
+                overlap_y as f32,
+                overlap_w as f32,
+                overlap_h as f32,
             );
-
             let _ = t_manager.canvas.with_texture_canvas(ui_tex, |c| {
-                let _ = c.copy(tex, unit_src, unit_dst);
-                ()
+                let _ = c.copy_f(tex, unit_src, unit_dst);
             });
         }
     }
@@ -217,14 +212,21 @@ impl HistoryStep {
             let overlap_w = f32::min(to_ui_coord_x + to_ui_coord_wh, dst_x + dst_w) - overlap_x;
             let overlap_h = f32::min(to_ui_coord_y + to_ui_coord_wh, dst_y + dst_h) - overlap_y;
 
-            let unit_src = Rect::new(
-                (f32::max(0.0, dst_x - to_ui_coord_x) / data.screen_zoom) as i32,
-                (f32::max(0.0, dst_y - to_ui_coord_y) / data.screen_zoom) as i32,
-                (overlap_w / data.screen_zoom).round() as u32,
-                (overlap_h / data.screen_zoom).round() as u32,
-            );
+            let w_f = overlap_w / data.screen_zoom;
+            let h_f = overlap_h / data.screen_zoom;
+            let x = (f32::max(0.0, dst_x - to_ui_coord_x) / data.screen_zoom) as i32;
+            let y = (f32::max(0.0, dst_y - to_ui_coord_y) / data.screen_zoom) as i32;
+            let w = w_f.ceil();
+            let h = h_f.ceil();
+            let unit_src = Rect::new(x, y, w as u32, h as u32);
 
-            let unit_dst = FRect::new(overlap_x, overlap_y, overlap_w, overlap_h);
+            let unit_dst = if data.screen_zoom > 1.0 {
+                let dif_x = (w - w_f) * data.screen_zoom;
+                let dif_y = (h - h_f) * data.screen_zoom;
+                FRect::new(overlap_x, overlap_y, overlap_w + dif_x, overlap_h + dif_y)
+            } else {
+                FRect::new(overlap_x, overlap_y, overlap_w, overlap_h)
+            };
 
             t_manager
                 .canvas
@@ -233,10 +235,14 @@ impl HistoryStep {
         }
     }
     pub fn make_static(&mut self, t_manager: &mut TextureManager) {
+        if self.is_static {
+            return;
+        }
         for i in 0..self.flat_copy.len() {
             let unit = self.flat_copy[i];
             t_manager.make_static(unit.id);
         }
+        self.is_static = true;
     }
 }
 /// * `textures`: Some(id) points to a valid, "used" texture

@@ -14,6 +14,18 @@ impl WH {
     pub fn new_one(wh: i32) -> WH {
         WH { w: wh, h: wh }
     }
+    pub fn mult_one(&self, mult: i32) -> WH {
+        WH {
+            w: self.w * mult,
+            h: self.h * mult,
+        }
+    }
+    pub fn min_one(&self, by: i32) -> WH {
+        WH {
+            w: min(self.w, by),
+            h: min(self.w, by),
+        }
+    }
 }
 #[derive(Copy, Clone, Debug)]
 pub struct XY {
@@ -58,6 +70,18 @@ impl XY {
             y: self.y - other,
         }
     }
+    pub fn add_one(&self, other: i32) -> XY {
+        XY {
+            x: self.x + other,
+            y: self.y + other,
+        }
+    }
+    pub fn add(&self, other: XY) -> XY {
+        XY {
+            x: self.x + other.x,
+            y: self.y + other.y,
+        }
+    }
     pub fn substract(&self, other: XY) -> XY {
         XY {
             x: self.x - other.x,
@@ -70,7 +94,7 @@ impl XY {
             + (self.y - distance_to.y) as f64 * (self.y - distance_to.y) as f64) as f32)
             .sqrt()
     }
-    pub fn to_bound(&self, other: XY) -> XXYY {
+    pub fn bound_between(self, other: XY) -> XXYY {
         XXYY::new(
             min(self.x, other.x),
             max(self.x, other.x),
@@ -78,15 +102,10 @@ impl XY {
             max(self.y, other.y),
         )
     }
-    pub fn expand(&self, x: i32, y: i32) -> XXYY {
-        XXYY {
-            xa: self.x - x,
-            xb: self.x + x,
-            ya: self.y - y,
-            yb: self.y + y,
-        }
+    pub fn to_bound(self) -> XXYY {
+        XXYY::new(self.x, self.x, self.y, self.y)
     }
-    pub fn to_tr_one(&self, wh: i32) -> XYWH {
+    pub fn to_tr_one(self, wh: i32) -> XYWH {
         XYWH {
             x: self.x,
             y: self.y,
@@ -94,12 +113,39 @@ impl XY {
             h: wh,
         }
     }
-    pub fn to_tr(&self, wh: WH) -> XYWH {
+    pub fn to_tr(self, wh: WH) -> XYWH {
         XYWH {
             x: self.x,
             y: self.y,
             w: wh.w,
             h: wh.h,
+        }
+    }
+    pub fn to_f32(self) -> XYF32 {
+        XYF32 {
+            x: self.x as f32,
+            y: self.y as f32,
+        }
+    }
+}
+pub struct XYF32 {
+    pub x: f32,
+    pub y: f32,
+}
+impl XYF32 {
+    pub fn new(x: f32, y: f32) -> XYF32 {
+        XYF32 { x, y }
+    }
+    pub fn mult_one(&self, mult: f32) -> XYF32 {
+        XYF32 {
+            x: self.x * mult,
+            y: self.y * mult,
+        }
+    }
+    pub fn mult(&self, mult: XYF32) -> XYF32 {
+        XYF32 {
+            x: self.x * mult.x,
+            y: self.y * mult.y,
         }
     }
 }
@@ -190,6 +236,14 @@ pub struct XXYY {
 impl XXYY {
     pub fn new(xa: i32, xb: i32, ya: i32, yb: i32) -> Self {
         Self { xa, xb, ya, yb }
+    }
+    pub fn expand_one(&mut self, xy: i32) -> Self {
+        Self {
+            xa: self.xa - xy,
+            xb: self.xb + xy,
+            ya: self.ya - xy,
+            yb: self.yb + xy,
+        }
     }
     pub fn expand(&mut self, x: i32, y: i32) -> Self {
         Self {

@@ -1,12 +1,10 @@
 use std::cmp::min;
 
-use sdl2::{rect::Rect, render::*, video::Window};
-
-use crate::dl;
+use crate::{d, dl};
 
 use super::{
     canvas_manager::CanvasData, coords::XYWH, history_step::HistoryStep, layer::Layer,
-    texture_data::TextureData, texture_manager::TextureManager,
+    texture_manager::TextureManager,
 };
 
 pub struct History {
@@ -24,14 +22,12 @@ impl History {
             selected_h_step: None,
         }
     }
-    pub fn selected_step_mut(&mut self) -> &mut HistoryStep {
-        if self.selected_h_step.is_none() {
-            println!("{}", self.steps.len());
-            self.add_step();
-        }
-        &mut self.steps[self.selected_h_step.unwrap()]
+    /// returns None if there is no selected step
+    pub fn try_get_target_step(&mut self) -> Option<&mut HistoryStep> {
+        let step = &mut self.steps[self.selected_h_step?];
+        if step.is_static { None } else { Some(step) }
     }
-    pub fn add_step(&mut self) {
+    pub fn add_step(&mut self) -> &mut HistoryStep {
         let current_layer_id = self.selected_layer.unwrap_or(self.add_layer());
         let current_layer = &mut self.layers[current_layer_id];
 
@@ -45,21 +41,32 @@ impl History {
         }
         let new_id = self.steps.len();
 
+        self.selected_h_step = Some(new_id);
+
         if let Some(leaf_id) = current_layer.leaf_id {
+            // trying to catch a bug
+            // FIXME:
+            if self.steps.get(leaf_id).is_none() {
+                d!("leaf not found");
+                d!(self.steps.len());
+                d!(leaf_id);
+                dl!(self.selected_h_step);
+                panic!();
+            }
             //modify leaf to point to new leaf
             self.steps[leaf_id].next_layer_step = Some(new_id);
-            //add new step, that points to the old leaf
-            self.steps.push(HistoryStep::new());
             //update layer
             current_layer.leaf_id = Some(new_id);
-        } else {
-            //add root and set it to the current layer
+            //add new step, that points to the old leaf
             self.steps.push(HistoryStep::new());
-
+        } else {
             current_layer.root_id = Some(new_id);
             current_layer.leaf_id = Some(new_id);
+
+            //add root and set it to the current layer
+            self.steps.push(HistoryStep::new());
         }
-        self.selected_h_step = Some(new_id);
+        &mut self.steps[new_id]
     }
     pub fn add_layer(&mut self) -> usize {
         let insert_index = if let Some(s) = self.selected_layer {
@@ -82,6 +89,7 @@ impl History {
             (dst.w as f32 / data.screen_zoom) as i32,
             (dst.h as f32 / data.screen_zoom) as i32,
         );
+
         for step_id in 0..(self.selected_h_step.unwrap() + 1) {
             if data.transform.w > 10_000 || data.transform.h > 10_000 {
                 self.steps[step_id].full_draw_double(t_manager, data, src, dst);
@@ -91,6 +99,9 @@ impl History {
         }
     }
     pub fn finish_step(&mut self, t_manager: &mut TextureManager) {
+        if self.selected_h_step.is_none() {
+            return;
+        }
         self.steps[self.selected_h_step.unwrap()].make_static(t_manager);
     }
 }

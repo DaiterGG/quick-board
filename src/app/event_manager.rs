@@ -1,8 +1,8 @@
 use sdl2::{EventPump, Sdl, event::*, keyboard::Keycode, mouse::*};
 
-use crate::dl;
+use crate::{app::input_state::ButtonState, dl};
 
-use super::{action_pump::*, coords::*, pointer_state::*, tool_trait::ToolId, ui_manager::*};
+use super::{action_pump::*, coords::*, input_state::InputState, tool_trait::*, ui_manager::*};
 
 pub struct EventManager {
     pump: EventPump,
@@ -20,7 +20,7 @@ impl EventManager {
     }
     pub fn handle_events(
         &mut self,
-        pointer: &mut PointerState,
+        input: &mut InputState,
         ui: &mut UIManager,
         action_pump: &mut ActionPump,
     ) -> Result<UserQuit, String> {
@@ -46,60 +46,57 @@ impl EventManager {
                 }
 
                 Event::MouseMotion { x, y, .. } => {
-                    pointer.updated = true;
-                    pointer.pos = XY::new(x, y);
+                    input.updated = true;
+                    input.delta = XY::new(x - input.pos.x, y - input.pos.y);
+                    input.pos = XY::new(x, y);
                 }
                 Event::MouseWheel { y, .. } => {
-                    pointer.updated = true;
-                    pointer.scroll_y = y;
+                    input.updated = true;
+                    input.scroll_y = y;
                 }
                 Event::KeyUp { keycode, .. } => match keycode {
                     Some(Keycode::Space) => {
                         action_pump.add(HoldTool(ToolId::Move, false));
                     }
-                    Some(Keycode::LShift) => self.shift_pressed = false,
-                    Some(Keycode::LCtrl) => self.ctrl_pressed = false,
+                    Some(Keycode::LShift) => input.shift.0 = false,
+                    Some(Keycode::RShift) => input.shift.1 = false,
+                    Some(Keycode::LCtrl) => input.ctrl.0 = false,
+                    Some(Keycode::RCtrl) => input.ctrl.1 = false,
+                    Some(Keycode::LAlt) => input.alt.0 = false,
+                    Some(Keycode::RAlt) => input.alt.1 = false,
                     _ => {}
                 },
                 Event::KeyDown { keycode, .. } => match keycode {
                     Some(Keycode::Space) => {
                         action_pump.add(HoldTool(ToolId::Move, true));
                     }
-                    Some(Keycode::LShift) => self.shift_pressed = true,
-                    Some(Keycode::LCtrl) => self.ctrl_pressed = true,
+                    Some(Keycode::LShift) => input.shift.0 = true,
+                    Some(Keycode::RShift) => input.shift.1 = true,
+                    Some(Keycode::LCtrl) => input.ctrl.0 = true,
+                    Some(Keycode::RCtrl) => input.ctrl.1 = true,
+                    Some(Keycode::LAlt) => input.alt.0 = true,
+                    Some(Keycode::RAlt) => input.alt.1 = true,
                     Some(Keycode::F) => {
                         action_pump.add(BrushSize(true));
                     }
                     Some(Keycode::A) => {
                         action_pump.add(BrushSize(false));
                     }
-                    Some(Keycode::Z) if self.ctrl_pressed && !self.shift_pressed => {
-                        dl!("Z ctrl");
+                    Some(Keycode::Z) if input.ctrl() && !input.shift() => {
                         action_pump.add(Undo);
                     }
-                    Some(Keycode::Z) if self.ctrl_pressed && self.shift_pressed => {
-                        dl!("Z");
+                    Some(Keycode::Z) if input.shift() && !input.ctrl() => {
                         action_pump.add(Redo);
                     }
                     _ => {}
                 },
                 Event::MouseButtonDown { mouse_btn, .. } => {
-                    pointer.updated = true;
-                    match mouse_btn {
-                        MouseButton::Left => pointer.left = ButtonState::Pressed,
-                        MouseButton::Right => pointer.right = ButtonState::Pressed,
-                        MouseButton::Middle => pointer.middle = ButtonState::Pressed,
-                        _ => {}
-                    }
+                    input.updated = true;
+                    input.states[mouse_btn as usize] = ButtonState::Pressed;
                 }
                 Event::MouseButtonUp { mouse_btn, .. } => {
-                    pointer.updated = true;
-                    match mouse_btn {
-                        MouseButton::Left => pointer.left = ButtonState::Released,
-                        MouseButton::Right => pointer.right = ButtonState::Released,
-                        MouseButton::Middle => pointer.middle = ButtonState::Released,
-                        _ => {}
-                    }
+                    input.updated = true;
+                    input.states[mouse_btn as usize] = ButtonState::Released;
                 }
                 _ => {}
             }

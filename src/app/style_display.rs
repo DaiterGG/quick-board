@@ -22,7 +22,7 @@ pub enum DisplayState {
     Released,
     Total,
 }
-#[derive(Clone)]
+#[derive(Copy, Clone)]
 /// active_states: current element state
 /// states_data: constant settings
 pub struct Display {
@@ -50,19 +50,19 @@ impl Display {
         dis.active_states[DisplayState::Idle as usize] = true;
         dis
     }
-    pub fn hovered(&mut self, data: DisplayData) -> &mut Self {
+    pub fn hovered(mut self, data: DisplayData) -> Self {
         self.states_data[DisplayState::Hovered as usize] = Some(data);
         self
     }
-    pub fn pressed(&mut self, data: DisplayData) -> &mut Self {
+    pub fn pressed(mut self, data: DisplayData) -> Self {
         self.states_data[DisplayState::Pressed as usize] = Some(data);
         self
     }
-    pub fn released(&mut self, data: DisplayData) -> &mut Self {
+    pub fn released(mut self, data: DisplayData) -> Self {
         self.states_data[DisplayState::Released as usize] = Some(data);
         self
     }
-    pub fn held(&mut self, data: DisplayData) -> &mut Self {
+    pub fn held(mut self, data: DisplayData) -> Self {
         self.states_data[DisplayState::Held as usize] = Some(data);
         self
     }

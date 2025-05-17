@@ -1,6 +1,9 @@
-use sdl2::{render::*, video::Window};
+use crate::app::drag::Drag;
 
-use super::{coords::XYWH, predefined::*, texture_manager::TextureManager, ui_map::UIMap};
+use super::{
+    action_pump::ActionPump, button::Button, coords::XYWH, draw_window::DrawWindow, input_state::*,
+    predefined::*, style_display::DisplayState, texture_manager::TextureManager, ui_map::UIMap,
+};
 
 pub struct UIElement {
     pub element_type: ElementType,
@@ -13,6 +16,7 @@ pub enum ElementType {
     Div,
     Button,
     DrawWindow,
+    Drag,
 }
 
 impl UIElement {
@@ -23,6 +27,67 @@ impl UIElement {
             childrens,
             transform: XYWH::zero(),
         }
+    }
+
+    pub fn pointer_collision_rec(
+        id: IdI32,
+        ui_map: &mut UIMap,
+        input: &mut InputState,
+        parrent_hit: bool,
+        actions: &mut ActionPump,
+    ) -> bool {
+        // if parrent wasn't hit, then children are not calculated
+        let hit = parrent_hit && input.pos.is_within(ui_map.elements[id as usize].transform);
+
+        use ButtonState as B;
+        use DisplayState as D;
+        if let Some(dis) = &mut ui_map.displays[id as usize] {
+            dis.set_state(D::Hovered, hit);
+            dis.set_state(D::Pressed, input.left() == B::Pressed && hit);
+            dis.set_state(D::Held, input.left() == B::Held && hit);
+            dis.set_state(D::Released, input.left() == B::Released && hit);
+            // println!("{:?}", dis.active_states);
+            // println!("{:?}", states.pointer.left);
+        }
+        // element specific logic
+        match ui_map.elements[id as usize].element_type {
+            ElementType::Button if hit => {
+                Button::before_collision(id, actions, input);
+            }
+            ElementType::DrawWindow => {
+                DrawWindow::before_collision(
+                    id,
+                    &ui_map.elements[id as usize],
+                    actions,
+                    input,
+                    hit,
+                );
+            }
+            ElementType::Drag => {
+                Drag::before_collision(id, actions, input, hit);
+            }
+            _ => {} //div
+        }
+
+        for i in 0..ui_map.elements[id as usize].childrens.len() {
+            Self::pointer_collision_rec(
+                ui_map.elements[id as usize].childrens[i],
+                ui_map,
+                input,
+                hit,
+                actions,
+            );
+        }
+
+        // element specific logic
+        // match ui_map.elements[id as usize].element_type {
+        //     ElementType::Button if hit => {
+        //         // Button::after_collision(ui.element(id), states);
+        //     }
+        //     _ => {} //div
+        // }
+        // for ui_manager check
+        hit
     }
     pub fn draw_to(&self, styles: &UIMap, textures: &mut TextureManager) {
         let dis = &styles.displays[self.id as usize];

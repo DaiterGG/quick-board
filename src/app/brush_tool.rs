@@ -3,7 +3,7 @@ use std::{cmp::*, thread::sleep};
 use crate::*;
 
 use super::{
-    canvas_manager::*, coords::*, pointer_state::*, texture_data::TextureData, texture_manager::*,
+    canvas_manager::*, coords::*, input_state::*, texture_data::TextureData, texture_manager::*,
 };
 use indices::indices;
 use sdl2::{gfx::primitives::DrawRenderer, pixels::*, rect::Rect, render::*, video::Window};
@@ -11,8 +11,10 @@ use sdl2::{gfx::primitives::DrawRenderer, pixels::*, rect::Rect, render::*, vide
 const BUFFER_TEX_SIZE: i32 = 5000;
 const BUFFER_TEX_SIZE_I16: i16 = BUFFER_TEX_SIZE as i16;
 pub struct Brush {
-    brush_diameter: i32,
-    draw_gap: i32,
+    // private set
+    // pub get sub_brush_diameter as i32
+    pub sub_brush_diameter: f32,
+    draw_gap_percent: i32,
     last_stroke_at: XY,
     color: Color,
     mask_id: usize,
@@ -22,7 +24,6 @@ pub struct Brush {
 }
 impl Brush {
     pub fn new(t_manager: &mut TextureManager) -> Self {
-        let diameter = 1;
         // let size = WH::new(brush_diameter, brush_diameter);
         let size = WH::new(BUFFER_TEX_SIZE, BUFFER_TEX_SIZE);
 
@@ -40,8 +41,8 @@ impl Brush {
 
         let mut s = Self {
             buffer_id,
-            brush_diameter: diameter,
-            draw_gap: 1,
+            sub_brush_diameter: 3.0,
+            draw_gap_percent: 10,
             last_stroke_at: XY::new(0, 0),
             color: Color::RGBA(255, 0, 0, 255),
             mask_id,
@@ -52,6 +53,9 @@ impl Brush {
         s.update_buffer(t_manager);
         s
     }
+    pub fn brush_diameter(&self) -> i32 {
+        self.sub_brush_diameter.floor() as i32
+    }
     fn generate_circle_mask(&mut self, t_manager: &mut TextureManager) {
         let _ = t_manager.canvas.with_texture_canvas(
             &mut t_manager.open_textures[self.mask_id].texture,
@@ -59,7 +63,7 @@ impl Brush {
                 //create a fake original data
                 c.set_draw_color(Color::RGBA(255, 255, 255, 0));
                 c.clear();
-                c.filled_pie(
+                let _ = c.filled_pie(
                     BUFFER_TEX_SIZE_I16 / 2,
                     BUFFER_TEX_SIZE_I16 / 2,
                     BUFFER_TEX_SIZE_I16 / 2,
@@ -72,63 +76,69 @@ impl Brush {
     }
 
     fn update_buffer(&mut self, t_manager: &mut TextureManager) {
-        let src = Rect::new(0, 0, self.brush_diameter as u32, self.brush_diameter as u32);
+        let src = Rect::new(
+            0,
+            0,
+            self.brush_diameter() as u32,
+            self.brush_diameter() as u32,
+        );
 
         let (buf_t, mask_t) = indices!(&mut t_manager.open_textures, self.buffer_id, self.mask_id);
 
-        t_manager
+        let _ = t_manager
             .canvas
             .with_texture_canvas(&mut buf_t.texture, |c| {
                 c.set_draw_color(Color::RGBA(255, 255, 255, 0));
                 c.clear();
-                c.copy(&mask_t.texture, None, src);
+                let _ = c.copy(&mask_t.texture, None, src);
             });
     }
 
     // no texture recreation for now
-    pub fn resize(&mut self, t_manager: &mut TextureManager, new_size: i32) {
+    pub fn resize(&mut self, t_manager: &mut TextureManager, new_size: f32) {
         // self.brush_diameter = new_size;
         // let size = WH::new(self.brush_diameter, self.brush_diameter);
         // t_manager.destroy_open_texture(self.buffer_id);
         // self.buffer_id =
         //     t_manager.init_open_texture(TextureData::new(&t_manager.t_creator, size, None));
-        self.brush_diameter = new_size;
+
+        self.sub_brush_diameter = new_size.clamp(1.0, 5000.0);
+
+        // NOTE: just use brush_diameter
         // t_manager.open_textures[self.buffer_id].src =
         //     Some(XYWH::new(0, 0, self.brush_diameter, self.brush_diameter));
+
         self.update_buffer(t_manager);
     }
     pub fn process_stroke(
         &mut self,
         data: &mut CanvasData,
-        pointer: &PointerState,
+        input: &InputState,
         stroke_at: XY,
         t_manager: &mut TextureManager,
     ) {
-        if pointer.left == ButtonState::Idle
-            || pointer.interacting_with != Some(data.targeted_ui_element)
-        {
+        use ButtonState::*;
+        if input.left() == Idle || input.interacting_with != Some(data.targeted_ui_element) {
             return;
         }
-        if pointer.left == ButtonState::Released {
+        if input.left() == Released {
             data.history.finish_step(t_manager);
             return;
         }
 
-        let radius = self.brush_diameter / 2;
+        let radius = self.brush_diameter() / 2;
 
-        if pointer.left == ButtonState::Pressed {
-            data.history.add_step();
-            let step = &mut data.history.selected_step_mut();
+        if input.left() == Pressed {
+            let step = data.history.add_step();
             self.last_stroke_at = stroke_at;
-            let bound = stroke_at.expand(radius, radius);
+            let bound = stroke_at.to_bound().expand_one(radius);
             let texture_unit_vec = step.get_textures(bound, data.transform, t_manager);
             let buffer = &mut t_manager.open_textures[self.buffer_id];
             let buffer_at = stroke_at.substract_one(radius);
-            for tex in 0..texture_unit_vec.len() {
-                let origin = texture_unit_vec[tex].origin;
-                let texture = &mut t_manager.draw_textures[texture_unit_vec[tex].id];
+            for unit in texture_unit_vec {
+                let texture = &mut t_manager.draw_textures[unit.id];
                 self.draw_to_texture(
-                    buffer_at.substract(origin),
+                    buffer_at.substract(unit.origin),
                     &mut t_manager.canvas,
                     texture,
                     buffer,
@@ -136,11 +146,15 @@ impl Brush {
             }
             return;
         }
-        let step = &mut data.history.selected_step_mut();
+        let step = if let Some(step) = data.history.try_get_target_step() {
+            step
+        } else {
+            return;
+        };
 
         let traveled = stroke_at.distance(self.last_stroke_at);
 
-        let gap_f = self.draw_gap as f32;
+        let gap_f = max((radius * self.draw_gap_percent) / 100, 1) as f32;
         let strokes_count_f = traveled / gap_f;
         let strokes_count = strokes_count_f.floor() as i32;
         if strokes_count == 0 {
@@ -162,7 +176,7 @@ impl Brush {
                 || (first.y - last.y).abs() > DRAW_TEX_SIZE_I32 * 2
                 || i == strokes_count - 1
             {
-                let stroke_box = first.to_bound(last).expand(radius, radius);
+                let stroke_box = first.bound_between(last).expand_one(radius);
                 if !data.transform.to_bound().is_overlaping(stroke_box) {
                     new_last_stroke = stroke_at;
                     break;
@@ -173,13 +187,11 @@ impl Brush {
 
                 let buffer = &mut t_manager.open_textures[self.buffer_id];
 
-                for i in 0..strokes.len() {
-                    let buffer_at = strokes[i].substract_one(radius);
-
-                    for tex in 0..texture_unit_vec.len() {
-                        let origin = texture_unit_vec[tex].origin;
-                        let texture = &mut t_manager.draw_textures[texture_unit_vec[tex].id];
-                        let to_unit_coord = buffer_at.substract(origin);
+                for st in &strokes {
+                    let buffer_at = st.substract_one(radius);
+                    for tex in &texture_unit_vec {
+                        let texture = &mut t_manager.draw_textures[tex.id];
+                        let to_unit_coord = buffer_at.substract(tex.origin);
                         self.draw_to_texture(to_unit_coord, &mut t_manager.canvas, texture, buffer);
                     }
                 }
@@ -203,10 +215,9 @@ impl Brush {
         buffer
             .texture
             .set_color_mod(self.color.r, self.color.g, self.color.b);
-        let time = std::time::Instant::now();
 
         let dst = buffer_at
-            .to_tr_one(self.brush_diameter)
+            .to_tr_one(self.brush_diameter())
             .get_overlap(WH::new_one(DRAW_TEX_SIZE_I32));
         if dst.w == 0 || dst.h == 0 {
             return;
@@ -221,13 +232,5 @@ impl Brush {
         });
         // print!("{}, ", time.elapsed().as_nanos());
         // println!("overlap {} {} {}", dst.w, dst.h, dst.w * dst.h);
-    }
-    pub fn change_brush_size(&mut self, up: bool, t_manager: &mut TextureManager) {
-        let new_size = if up {
-            (self.brush_diameter as f32 * 1.1).ceil() as i32
-        } else {
-            (self.brush_diameter as f32 * 0.9).floor() as i32
-        };
-        self.resize(t_manager, new_size);
     }
 }

@@ -1,25 +1,19 @@
-use app::texture_data::TextureData;
-use sdl2::{pixels::Color, rect::Rect, render::*, video::Window};
+use app::{cursor::CanvasCursor, texture_data::TextureData};
+use sdl2::pixels::Color;
 
 use crate::*;
 
 use super::{
-    coords::*,
-    history::History,
-    pointer_state::PointerState,
-    predefined::{Id, IdI32},
-    style_display::DisplayState,
-    texture_manager::*,
-    tool_trait::*,
-    ui_map::UIMap,
+    coords::*, history::History, input_state::InputState, predefined::*,
+    style_display::DisplayState, texture_manager::*, tool_trait::*, ui_map::UIMap,
 };
 
 pub type StepId = usize;
 pub struct CanvasManager {
     pub data: CanvasData,
-    // ui_window_was_updated: bool,
     pub current_tool: ToolId,
     pub tools: Tools,
+    pub cursor: CanvasCursor,
     previous_tool: Option<ToolId>,
 }
 /// data to pass to tools and save to config
@@ -35,6 +29,7 @@ pub struct CanvasData {
     pub targeted_ui_texture: usize,
     pub targeted_ui_element: IdI32,
     pub history: History,
+    pub update_cursor: bool,
 }
 const BIG_CANVAS: i32 = 10_000;
 impl CanvasManager {
@@ -57,6 +52,7 @@ impl CanvasManager {
                 // transform: XYWH::new(0, 0, 400, 300),
                 // screen_zoom: 1.0,
                 screen_zoom: 1.0,
+                update_cursor: true,
                 screen_pos: XY::new(BIG_CANVAS / -2, BIG_CANVAS / -2),
                 transform: XYWH::new(0, 0, BIG_CANVAS, BIG_CANVAS),
                 history: History::new(),
@@ -64,6 +60,7 @@ impl CanvasManager {
                 targeted_ui_element: window_id,
             },
             // ui_window_was_updated: true,
+            cursor: CanvasCursor::new(),
             current_tool: ToolId::Brush,
             previous_tool: None,
             tools: Tools::init_all_tools(t_manager),
@@ -71,7 +68,7 @@ impl CanvasManager {
     }
     pub fn update(
         &mut self,
-        pointer: &PointerState,
+        input: &InputState,
         ui_map: &mut UIMap,
         textures: &mut TextureManager,
     ) {
@@ -82,23 +79,28 @@ impl CanvasManager {
 
         match self.current_tool {
             ToolId::Brush => {
-                let stroke_at = pointer
+                let stroke_at = input
                     .pos
                     .substract(draw_win_transform.xy())
                     .transform_from(self.data.screen_zoom, self.data.screen_pos);
                 self.tools
                     .brush
-                    .process_stroke(&mut self.data, pointer, stroke_at, textures);
+                    .process_stroke(&mut self.data, input, stroke_at, textures);
             }
             ToolId::Move => {
-                self.tools.move_tool.process_stroke(&mut self.data, pointer);
+                self.tools.move_tool.process_stroke(&mut self.data, input);
             }
             _ => {}
         }
+        if self.data.update_cursor {
+            self.cursor
+                .update(self.data.screen_zoom, self.tools.brush.brush_diameter());
+
+            self.data.update_cursor = false;
+        }
 
         //draw to buffer
-        let ui_tex_id = self.data.targeted_ui_texture;
-        let ui_tex = &mut textures.open_textures[ui_tex_id];
+        let ui_tex = &mut textures.open_textures[self.data.targeted_ui_texture];
         let dst = self.calc_canvas_pos(draw_win_transform.wh());
 
         // this is just a buffer texture to be copied to draw_window directly
@@ -146,9 +148,24 @@ impl CanvasManager {
         }
     }
 
-    pub fn undo(&mut self) {
-        dl!(self.data.history.selected_h_step);
+    pub fn add_brush_size(&mut self, add: f32, t_manager: &mut TextureManager) {
+        let brush = &mut self.tools.brush;
+        brush.resize(t_manager, brush.sub_brush_diameter + add);
+        self.data.update_cursor = true;
+    }
+    pub fn mult_brush_size(&mut self, up: bool, t_manager: &mut TextureManager) {
+        let brush = &mut self.tools.brush;
+        let new_size = if up {
+            brush.sub_brush_diameter * 1.1
+        } else {
+            brush.sub_brush_diameter * 0.9
+        };
+        brush.resize(t_manager, new_size);
+        self.data.update_cursor = true;
+    }
+    pub fn undo(&mut self, t_manager: &mut TextureManager) {
         if let Some(id) = self.data.history.selected_h_step {
+            self.data.history.finish_step(t_manager);
             if id > 0 {
                 self.data.history.selected_h_step = Some(id - 1);
             } else {

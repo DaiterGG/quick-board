@@ -1,4 +1,4 @@
-use super::{action_pump::*, pointer_state::*, predefined::*, ui_element::UIElement};
+use super::{action_pump::*, input_state::*, predefined::*, ui_element::UIElement};
 
 pub struct DrawWindow;
 impl DrawWindow {
@@ -6,11 +6,11 @@ impl DrawWindow {
         id: IdI32,
         element: &UIElement,
         actions: &mut ActionPump,
-        pointer: &mut PointerState,
+        input: &mut InputState,
         was_hit: bool,
     ) {
-        if was_hit && pointer.left == ButtonState::Pressed {
-            pointer.interacting_with = Some(id);
+        if was_hit && input.left() == ButtonState::Pressed {
+            input.interacting_with = Some(id);
         }
         // if !was_hit && pointer.interacting_with == Some(id) {
         //     pointer.interacting_with = None;

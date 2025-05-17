@@ -1,9 +1,6 @@
 use sdl2::{render::*, video::Window};
 
-use super::{
-    canvas_manager::CanvasData, coords::XY, history_step::HistoryStep, pointer_state::PointerState,
-    texture_manager::TextureManager,
-};
+use super::{canvas_manager::CanvasData, input_state::InputState, texture_manager::TextureManager};
 
 pub struct Fill;
 impl Fill {
@@ -13,7 +10,7 @@ impl Fill {
     pub fn process_stroke(
         &mut self,
         data: &mut CanvasData,
-        pointer: &PointerState,
+        input: &InputState,
         canvas: &mut Canvas<Window>,
         textures: &mut TextureManager,
     ) {

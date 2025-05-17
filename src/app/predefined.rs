@@ -41,16 +41,24 @@ markup! {
     // main layout
     RootMain:Div[Header,RightWide,RightTools,DrawWindow],
     /**/Header:Div[],
-    /**/RightWide:Div[],
+
+    /**/RightWide:Div[ColorPicker,ToolSettings],
+    /**//**/ColorPicker:Div[],
+    /**//**/ToolSettings:Div[BrushSettings],
+
     /**/RightTools:Div[IndButtons,BrushButton,GapButtonBrush,MoveButton,GapButtonFill],
     /**/DrawWindow:DrawWindow[],
 
+    // tool settings
+    BrushSettings:Div[ToolSize],
+    ToolSize:Div[ToolSizeText,ToolSizeDrag],
+    ToolSizeText:Div[],
+    ToolSizeDrag:Drag[],
+
     // tool buttons
     IndButtons:Div[],
-
     GapButtonBrush:Div[],
     BrushButton:Button[],
-
     GapButtonFill:Div[],
     MoveButton:Button[],
 

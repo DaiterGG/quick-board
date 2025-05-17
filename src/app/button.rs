@@ -1,6 +1,6 @@
 use crate::app::action_pump::Action;
 
-use super::{action_pump::ActionPump, pointer_state::*, predefined::*};
+use super::{action_pump::ActionPump, input_state::*, predefined::*};
 
 pub struct Button {}
 // impl Button {
@@ -8,15 +8,15 @@ pub struct Button {}
 //     }
 // }
 impl Button {
-    pub fn before_collision(id: IdI32, actions: &mut ActionPump, pointer: &mut PointerState) {
-        if pointer.left == ButtonState::Pressed {
+    pub fn before_collision(id: IdI32, actions: &mut ActionPump, input: &mut InputState) {
+        if input.left() == ButtonState::Pressed {
             // NOTE: this will only register the last sub button
             // TEST: this interaciton later
-            pointer.interacting_with = Some(id);
+            input.interacting_with = Some(id);
 
             // println!("interacting ");
         }
-        if pointer.left == ButtonState::Released && pointer.interacting_with == Some(id) {
+        if input.left() == ButtonState::Released && input.interacting_with == Some(id) {
             actions.add(Action::ButtonPressed(id));
             // println!("action registered")
         }
