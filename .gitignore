@@ -1,6 +1,5 @@
 /target
 /sdl2-sys
-/benches
 /dev
 /src/main_plgrd.rs
 /src/main.rs~

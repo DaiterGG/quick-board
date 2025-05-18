@@ -8,7 +8,7 @@ use crate::app::{
 use super::{
     color_map::ColorTag,
     coords::XY,
-    predefined::{ID_COUNT, Id, IdI32},
+    predefined::{Id, IdI32, ID_COUNT},
     slider::Slider,
     style_align::{Align, Direction, Side, Value},
     style_display::{Display, DisplayData},
