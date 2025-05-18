@@ -1,36 +1,56 @@
-use std::i32;
-
 use super::coords::*;
 
+// pub enum Value {
+//     Pixels(i16),
+//     Persent(i16),
+// }
 #[derive(Copy, Clone, Debug)]
-pub enum Align {
-    Block {
-        direction: Direction,
-        side: Side,
-        length: Value,
-        gap: Value,
-    },
-    Absolute {
-        pivot: XY,
-        align_by: XY,
-        size: (Value, Value),
-        // size: (i32, i32),
-        // b1: bool,
-        // b1: bool,
-    },
+pub struct Size {
+    hor: i16,
+    vert: i16,
+    hor_type: TreatAs,
+    vert_type: TreatAs,
+}
+impl Size {
+    pub fn new(hor_type: TreatAs, hor: i16, vert_type: TreatAs, vert: i16) -> Self {
+        Self {
+            hor,
+            vert,
+            hor_type,
+            vert_type,
+        }
+    }
+    pub fn unrap(&self, length: i32, ui_scale: f32) -> WH {
+        WH::new(
+            unwrap(self.hor, self.hor_type, length, ui_scale),
+            unwrap(self.vert, self.vert_type, length, ui_scale),
+        )
+    }
 }
 
 #[derive(Copy, Clone, Debug)]
-pub enum Value {
-    Pixels(i32),
-    Persent(i32),
+pub struct Value {
+    value: i16,
+    type_of: TreatAs,
 }
+
 impl Value {
+    pub const fn new(type_of: TreatAs, value: i16) -> Self {
+        Self { value, type_of }
+    }
     pub fn unwrap(&self, length: i32, ui_scale: f32) -> i32 {
-        match self {
-            Value::Pixels(pixels) => (*pixels as f32 * ui_scale) as i32,
-            Value::Persent(percent) => (length * *percent as i32) / 100,
-        }
+        unwrap(self.value, self.type_of, length, ui_scale)
+    }
+}
+#[derive(Copy, Clone, Debug)]
+pub enum TreatAs {
+    Percent,
+    Pixels,
+}
+fn unwrap(value: i16, type_of: TreatAs, length: i32, ui_scale: f32) -> i32 {
+    match type_of {
+        TreatAs::Percent => (length * value as i32) / 100,
+        TreatAs::Pixels => (value as f32 * ui_scale) as i32,
     }
 }
 
@@ -47,13 +67,28 @@ pub enum Direction {
     Horisontal,
     Vertical,
 }
+
+#[derive(Copy, Clone, Debug)]
+pub enum Align {
+    Block {
+        direction: Direction,
+        side: Side,
+        length: Value,
+        gap: Value,
+    },
+    Absolute {
+        pivot: XY,
+        align_by: XY,
+        size: Size,
+    },
+}
 impl Default for Align {
     fn default() -> Self {
         Align::Block {
             direction: Direction::Horisontal,
             side: Side::Start,
-            length: Value::Persent(100),
-            gap: Value::Persent(0),
+            length: Value::new(TreatAs::Percent, 100),
+            gap: Value::new(TreatAs::Percent, 0),
         }
     }
 }
@@ -63,7 +98,7 @@ impl Align {
             direction,
             side,
             length,
-            gap: Value::Persent(0),
+            gap: Value::new(TreatAs::Percent, 0),
         }
     }
     pub const fn gap(&mut self, new_gap: Value) -> &mut Self {
@@ -74,7 +109,7 @@ impl Align {
         self
     }
 
-    pub const fn absolute(pivot: XY, align_by: XY, size: (Value, Value)) -> Align {
+    pub const fn absolute(pivot: XY, align_by: XY, size: Size) -> Align {
         Self::Absolute {
             pivot,
             align_by,
@@ -83,7 +118,7 @@ impl Align {
     }
 
     pub fn apply(&self, window_to_fit: &mut XYWH, ui_scale: f32) -> XYWH {
-        return match &self {
+        match &self {
             Align::Block {
                 direction,
                 side,
@@ -91,17 +126,14 @@ impl Align {
                 gap,
             } => {
                 //split window into 2 blocks
-                split_window(window_to_fit, length, *side, *direction, ui_scale, gap)
+                split_window(window_to_fit, *length, *side, *direction, ui_scale, gap)
             }
             Align::Absolute {
                 pivot,
                 align_by,
                 size,
             } => {
-                let absolute = WH {
-                    w: size.0.unwrap(window_to_fit.w, ui_scale),
-                    h: size.1.unwrap(window_to_fit.h, ui_scale),
-                };
+                let absolute = size.unrap(window_to_fit.w, ui_scale);
                 let absolute_window_x = (window_to_fit.w * align_by.x) / 100;
                 let absolute_pivot_x = (absolute.w * pivot.x) / 100;
                 let new_x = (window_to_fit.x + absolute_window_x) - absolute_pivot_x;
@@ -115,19 +147,22 @@ impl Align {
 
                 XYWH::new(new_x, new_y, absolute.w, absolute.h)
             }
-        };
+        }
     }
 }
+/// split XYWH into 2
+/// returns the first one
+/// mutate window_to_split as second
 fn split_window(
     window_to_split: &mut XYWH,
-    block_length: &Value,
+    block_length: Value,
     align_side: Side,
     align_direction: Direction,
     ui_scale: f32,
     // TODO: test gap
     gap: &Value,
 ) -> XYWH {
-    let mut block_to_fit = window_to_split.clone();
+    let mut block_to_fit = *window_to_split;
     match align_direction {
         Direction::Horisontal => {
             let length = block_length.unwrap(window_to_split.w, ui_scale);
@@ -161,61 +196,61 @@ fn split_window(
     block_to_fit
 }
 
-// #[cfg(test)]
-// mod tests {
+#[cfg(test)]
+mod tests {
 
-//     use super::*;
-//     use proptest::prelude::*;
-//     proptest! {
-//         #[test]
-//         fn it_works_abs(abs in 0i32..8000,
-//             w_w in 0i32..8000,
-//             w_h in 0i32..8000,
-//             w_x in 0i32..8000,
-//             w_y in 0i32..8000) {
-//             let style = Align::block(
-//                 Direction::Horisontal,
-//                 Side::Start,
-//                 Value::Pixels(abs),
-//             );
-//             let mut window = XYWH::new(w_x, w_y, w_w, w_h);
-//             let result = style.apply(&mut window,& UIState::default());
-//             assert_eq!(result.x, w_x);
-//             assert_eq!(result.y, w_y);
-//             assert_eq!(result.w, abs);
-//             assert_eq!(result.h, w_h);
+    use super::*;
+    use proptest::prelude::*;
+    proptest! {
+        #[test]
+        fn it_works_abs(abs in 0i16..8000,
+            w_w in 0i32..8000,
+            w_h in 0i32..8000,
+            w_x in 0i32..8000,
+            w_y in 0i32..8000) {
+            let style = Align::block(
+                Direction::Horisontal,
+                Side::Start,
+                Value::new(TreatAs::Pixels, abs),
+            );
+            let mut window = XYWH::new(w_x, w_y, w_w, w_h);
+            let result = style.apply(&mut window,1.0);
+            assert_eq!(result.x, w_x);
+            assert_eq!(result.y, w_y);
+            assert_eq!(result.w, abs as i32);
+            assert_eq!(result.h, w_h);
 
-//             assert_eq!(window.x, w_x + abs);
-//             assert_eq!(window.y, w_y );
-//             assert_eq!(window.w, w_w - abs);
-//             assert_eq!(window.h, w_h);
-//         }
-//     }
+            assert_eq!(window.x, w_x + abs as i32);
+            assert_eq!(window.y, w_y );
+            assert_eq!(window.w, w_w - abs as i32);
+            assert_eq!(window.h, w_h);
+        }
+    }
 
-//     proptest! {
-//         #[test]
-//         fn it_works_rel(abs in 0i32..100,
-//             w_w in 0i32..8000,
-//             w_h in 0i32..8000,
-//             w_x in 0i32..8000,
-//             w_y in 0i32..8000) {
-//             let style = Align::block(
-//                 Direction::Vertical,
-//                 Side::End,
-//                 Value::Persent(abs),
-//             );
-//             let mut window = XYWH::new(w_x, w_y, w_w, w_h);
-//             let result = style.apply(&mut window,&UIState::default());
-//             let abs_to_px = (w_h * abs) / 100;
-//             assert_eq!(result.x, w_x);
-//             assert_eq!(result.y, w_y + (w_h - abs_to_px));
-//             assert_eq!(result.w, w_w);
-//             assert_eq!(result.h, abs_to_px);
+    proptest! {
+        #[test]
+        fn it_works_rel(abs in 0i16..100,
+            w_w in 0i32..8000,
+            w_h in 0i32..8000,
+            w_x in 0i32..8000,
+            w_y in 0i32..8000) {
+            let style = Align::block(
+                Direction::Vertical,
+                Side::End,
+                Value::new(TreatAs::Percent, abs),
+            );
+            let mut window = XYWH::new(w_x, w_y, w_w, w_h);
+            let result = style.apply(&mut window,1.0);
+            let abs_to_px = (w_h * abs as i32) / 100;
+            assert_eq!(result.x, w_x);
+            assert_eq!(result.y, w_y + (w_h - abs_to_px));
+            assert_eq!(result.w, w_w);
+            assert_eq!(result.h, abs_to_px);
 
-//             assert_eq!(window.x, w_x );
-//             assert_eq!(window.y, w_y );
-//             assert_eq!(window.w, w_w );
-//             assert_eq!(window.h, w_h - abs_to_px);
-//         }
-//     }
-// }
+            assert_eq!(window.x, w_x );
+            assert_eq!(window.y, w_y );
+            assert_eq!(window.w, w_w );
+            assert_eq!(window.h, w_h - abs_to_px);
+        }
+    }
+}

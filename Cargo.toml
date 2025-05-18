@@ -6,8 +6,8 @@ edition = "2024"
 [dev-dependencies]
 criterion = "0.5.1"
 proptest = "1.6.0"
-
 [dependencies]
+markup = { path = "markup" }
 enum-map = "2.7.3"
 enum_dispatch = "0.3.13"
 indices = "0.3.6"

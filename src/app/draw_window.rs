@@ -1,14 +1,15 @@
-use super::{action_pump::*, input_state::*, predefined::*, ui_element::UIElement};
+use super::{action_pump::*, input_state::*, predefined::*, ui_element::UIElement, ui_map::UIMap};
 
 pub struct DrawWindow;
 impl DrawWindow {
     pub fn before_collision(
         id: IdI32,
-        element: &UIElement,
         actions: &mut ActionPump,
         input: &mut InputState,
+        ui: &UIMap,
         was_hit: bool,
     ) {
+        let element = &ui.elements[id as usize];
         if was_hit && input.left() == ButtonState::Pressed {
             input.interacting_with = Some(id);
         }

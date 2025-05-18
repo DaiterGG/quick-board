@@ -14,7 +14,7 @@ struct OverrideChildren {
 pub struct ElementMap;
 impl ElementMap {
     pub fn init() -> Vec<UIElement> {
-        let predefined = Predefined::new();
+        let predefined = Predefined::init();
         // TODO: read custom layouts from file
         // let custom = IO::read_elements();
         // for i in 0..custom.len() {

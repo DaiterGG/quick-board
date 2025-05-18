@@ -4,7 +4,6 @@ use sdl2::pixels::Color;
 use sdl2::rect::Rect;
 use sdl2::render::BlendMode::Blend;
 use sdl2::render::*;
-use sdl2::surface;
 use sdl2::video::Window;
 
 use super::color_map::*;

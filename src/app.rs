@@ -17,6 +17,7 @@ mod layer;
 mod move_tool;
 pub mod predefined;
 mod predefined_styles;
+mod slider;
 mod style_align;
 mod style_display;
 mod texture_data;

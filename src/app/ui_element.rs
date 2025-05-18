@@ -1,4 +1,4 @@
-use crate::app::drag::Drag;
+use crate::app::{drag::Drag, slider::Slider};
 
 use super::{
     action_pump::ActionPump, button::Button, coords::XYWH, draw_window::DrawWindow, input_state::*,
@@ -17,6 +17,7 @@ pub enum ElementType {
     Button,
     DrawWindow,
     Drag,
+    Slider,
 }
 
 impl UIElement {
@@ -50,21 +51,19 @@ impl UIElement {
             // println!("{:?}", states.pointer.left);
         }
         // element specific logic
+        use ElementType as T;
         match ui_map.elements[id as usize].element_type {
-            ElementType::Button if hit => {
+            T::Button if hit => {
                 Button::before_collision(id, actions, input);
             }
-            ElementType::DrawWindow => {
-                DrawWindow::before_collision(
-                    id,
-                    &ui_map.elements[id as usize],
-                    actions,
-                    input,
-                    hit,
-                );
+            T::DrawWindow => {
+                DrawWindow::before_collision(id, actions, input, ui_map, hit);
             }
-            ElementType::Drag => {
+            T::Drag => {
                 Drag::before_collision(id, actions, input, hit);
+            }
+            T::Slider => {
+                Slider::before_collision(id, actions, input, ui_map, hit);
             }
             _ => {} //div
         }
@@ -81,7 +80,7 @@ impl UIElement {
 
         // element specific logic
         // match ui_map.elements[id as usize].element_type {
-        //     ElementType::Button if hit => {
+        //     T::Button if hit => {
         //         // Button::after_collision(ui.element(id), states);
         //     }
         //     _ => {} //div

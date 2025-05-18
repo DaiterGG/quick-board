@@ -1,3 +1,7 @@
+use std::collections::HashMap;
+
+use super::predefined::IdI32;
+use super::slider::Slider;
 use super::{element_map::ElementMap, predefined_styles::PredefinedStyles};
 
 use super::{color_map::*, style_align::*, style_display::*, ui_element::UIElement};
@@ -9,39 +13,27 @@ pub struct UIMap {
     // styles: Vec<(Align, Option<Display>)>,
     pub aligns: Vec<Align>,
     pub displays: Vec<Option<Display>>,
+    pub sliders_data: HashMap<IdI32, Slider>,
 
     pub colors: ColorMap,
 }
 
 impl UIMap {
     pub fn new() -> Self {
-        let (aligns, displays) = PredefinedStyles::new();
+        let (aligns, displays, sliders_data) = PredefinedStyles::init();
         Self {
             elements: ElementMap::init(),
             aligns,
             displays,
+            sliders_data,
             colors: ColorMap::new(),
         }
     }
 }
 
-///for testing
+#[cfg(test)]
 impl Default for UIMap {
     fn default() -> Self {
         Self::new()
     }
-}
-
-#[cfg(test)]
-mod tests {
-    // use super::*;
-    // struct Div {
-    //     def: Def,
-    // }
-    // #[test]
-    // fn it_works() {
-    //     let mut div = Div {
-    //         def: Def::MainMiddleStyle,
-    //     };
-    // }
 }
