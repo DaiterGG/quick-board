@@ -5,7 +5,7 @@
 /src/main_plgrd.rs
 /src/main.rs~
 /src/main.rz~
-/markup/target
+/markup/target/*
 *.bat
 *.dll
 *.lib
