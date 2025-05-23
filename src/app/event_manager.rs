@@ -1,6 +1,10 @@
 use sdl2::{EventPump, Sdl, event::*, keyboard::Keycode, mouse::*};
 
-use crate::{app::input_state::ButtonState, dl};
+use crate::{
+    TextureManager,
+    app::{canvas_manager, input_state::ButtonState, texture_manager},
+    d, dl,
+};
 
 use super::{action_pump::*, coords::*, input_state::InputState, tool_trait::*, ui_manager::*};
 
@@ -22,7 +26,8 @@ impl EventManager {
         &mut self,
         input: &mut InputState,
         ui: &mut UIManager,
-        action_pump: &mut ActionPump,
+        texture_manager: &mut TextureManager,
+        sdl: &Sdl,
     ) -> Result<UserQuit, String> {
         // let mouse_state = MouseState::new(&self.pump);
 
@@ -41,14 +46,48 @@ impl EventManager {
                     win_event: WindowEvent::Resized(w, h),
                     ..
                 } => {
-                    ui.window_size = WH { w, h };
-                    ui.requires_update = true;
+                    // potentially better way to handle it:
+                    // https://github.com/Rust-SDL2/rust-sdl2/issues/1243#issuecomment-2657420674
+                    ActionPump::add(WindowResized);
                 }
 
                 Event::MouseMotion { x, y, .. } => {
-                    input.updated = true;
                     input.delta = XY::new(x - input.pos.x, y - input.pos.y);
                     input.pos = XY::new(x, y);
+                    if input.mouse_wrap_on {
+                        let w_size = texture_manager.canvas.window().size();
+                        if x < 5 && input.delta.x < 0 {
+                            input.pos.x = w_size.0 as i32 - 10;
+                            sdl.mouse().warp_mouse_in_window(
+                                texture_manager.canvas.window(),
+                                input.pos.x,
+                                input.pos.y,
+                            );
+                        } else if x > w_size.0 as i32 - 5 && input.delta.x > 0 {
+                            input.pos.x = 10;
+                            sdl.mouse().warp_mouse_in_window(
+                                texture_manager.canvas.window(),
+                                input.pos.x,
+                                input.pos.y,
+                            );
+                        }
+                        if y < 5 && input.delta.y < 0 {
+                            input.pos.y = w_size.1 as i32 - 10;
+                            sdl.mouse().warp_mouse_in_window(
+                                texture_manager.canvas.window(),
+                                input.pos.x,
+                                input.pos.y,
+                            );
+                        } else if y > w_size.1 as i32 - 5 && input.delta.y > 0 {
+                            input.pos.y = 10;
+                            sdl.mouse().warp_mouse_in_window(
+                                texture_manager.canvas.window(),
+                                input.pos.x,
+                                input.pos.y,
+                            );
+                        }
+                    }
+                    input.updated = true;
                 }
                 Event::MouseWheel { y, .. } => {
                     input.updated = true;
@@ -56,7 +95,7 @@ impl EventManager {
                 }
                 Event::KeyUp { keycode, .. } => match keycode {
                     Some(Keycode::Space) => {
-                        action_pump.add(HoldTool(ToolId::Move, false));
+                        ActionPump::add(HoldTool(ToolId::Move, false));
                     }
                     Some(Keycode::LShift) => input.shift.0 = false,
                     Some(Keycode::RShift) => input.shift.1 = false,
@@ -68,7 +107,7 @@ impl EventManager {
                 },
                 Event::KeyDown { keycode, .. } => match keycode {
                     Some(Keycode::Space) => {
-                        action_pump.add(HoldTool(ToolId::Move, true));
+                        ActionPump::add(HoldTool(ToolId::Move, true));
                     }
                     Some(Keycode::LShift) => input.shift.0 = true,
                     Some(Keycode::RShift) => input.shift.1 = true,
@@ -77,16 +116,16 @@ impl EventManager {
                     Some(Keycode::LAlt) => input.alt.0 = true,
                     Some(Keycode::RAlt) => input.alt.1 = true,
                     Some(Keycode::F) => {
-                        action_pump.add(BrushSize(true));
+                        ActionPump::add(BrushSize(true));
                     }
                     Some(Keycode::A) => {
-                        action_pump.add(BrushSize(false));
+                        ActionPump::add(BrushSize(false));
                     }
                     Some(Keycode::Z) if input.ctrl() && !input.shift() => {
-                        action_pump.add(Undo);
+                        ActionPump::add(Undo);
                     }
                     Some(Keycode::Z) if input.shift() && !input.ctrl() => {
-                        action_pump.add(Redo);
+                        ActionPump::add(Redo);
                     }
                     _ => {}
                 },

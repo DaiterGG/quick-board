@@ -16,25 +16,35 @@ pub struct Brush {
     pub sub_brush_diameter: f32,
     draw_gap_percent: i32,
     last_stroke_at: XY,
-    color: Color,
     mask_id: usize,
     // the primary reason why the is a buffer is to buffer the "scale down" operation
     // of potentially big mask
     buffer_id: usize,
 }
 impl Brush {
+    // pub fn enable(&self, data: &mut CanvasData) {
+    //     data.update_cursor = true;
+    // }
     pub fn new(t_manager: &mut TextureManager) -> Self {
         // let size = WH::new(brush_diameter, brush_diameter);
         let size = WH::new(BUFFER_TEX_SIZE, BUFFER_TEX_SIZE);
 
-        let mask_id =
-            t_manager.init_open_texture(TextureData::new(&t_manager.t_creator, size, None));
+        let mask_id = t_manager.init_open_texture(TextureData::new(
+            &t_manager.t_creator,
+            size,
+            None,
+            Some(TextureAccess::Target),
+        ));
         t_manager.open_textures[mask_id]
             .texture
             .set_blend_mode(BlendMode::Blend);
 
-        let buffer_id =
-            t_manager.init_open_texture(TextureData::new(&t_manager.t_creator, size, None));
+        let buffer_id = t_manager.init_open_texture(TextureData::new(
+            &t_manager.t_creator,
+            size,
+            None,
+            Some(TextureAccess::Target),
+        ));
         t_manager.open_textures[buffer_id]
             .texture
             .set_blend_mode(BlendMode::Blend);
@@ -44,70 +54,64 @@ impl Brush {
             sub_brush_diameter: 3.0,
             draw_gap_percent: 10,
             last_stroke_at: XY::new(0, 0),
-            color: Color::RGBA(255, 0, 0, 255),
             mask_id,
         };
         s.generate_circle_mask(t_manager);
-        // t_manager.open_textures[s.buffer_id].src =
-        //     Some(XYWH::new(0, 0, s.brush_diameter, s.brush_diameter));
         s.update_buffer(t_manager);
         s
     }
     pub fn brush_diameter(&self) -> i32 {
         self.sub_brush_diameter.floor() as i32
     }
-    fn generate_circle_mask(&mut self, t_manager: &mut TextureManager) {
-        let _ = t_manager.canvas.with_texture_canvas(
-            &mut t_manager.open_textures[self.mask_id].texture,
-            |c| {
+    pub fn generate_circle_mask(&mut self, t_manager: &mut TextureManager) {
+        t_manager
+            .canvas
+            .with_texture_canvas(&mut t_manager.open_textures[self.mask_id].texture, |c| {
                 //create a fake original data
                 c.set_draw_color(Color::RGBA(255, 255, 255, 0));
                 c.clear();
-                let _ = c.filled_pie(
+                c.filled_pie(
                     BUFFER_TEX_SIZE_I16 / 2,
                     BUFFER_TEX_SIZE_I16 / 2,
                     BUFFER_TEX_SIZE_I16 / 2,
                     -1,
                     359,
                     Color::RGBA(255, 255, 255, 255),
-                );
-            },
-        );
+                )
+                .unwrap();
+            })
+            .unwrap();
     }
 
-    fn update_buffer(&mut self, t_manager: &mut TextureManager) {
-        let src = Rect::new(
-            0,
-            0,
-            self.brush_diameter() as u32,
-            self.brush_diameter() as u32,
-        );
+    pub fn update_buffer(&mut self, t_manager: &mut TextureManager) {
+        let diameter = self.brush_diameter() as u32;
+        let src = Rect::new(0, 0, diameter, diameter);
 
         let (buf_t, mask_t) = indices!(&mut t_manager.open_textures, self.buffer_id, self.mask_id);
 
-        let _ = t_manager
+        t_manager
             .canvas
             .with_texture_canvas(&mut buf_t.texture, |c| {
                 c.set_draw_color(Color::RGBA(255, 255, 255, 0));
                 c.clear();
-                let _ = c.copy(&mask_t.texture, None, src);
-            });
+                c.copy(&mask_t.texture, None, src).unwrap();
+            })
+            .unwrap();
     }
 
-    // no texture recreation for now
-    pub fn resize(&mut self, t_manager: &mut TextureManager, new_size: f32) {
-        // self.brush_diameter = new_size;
-        // let size = WH::new(self.brush_diameter, self.brush_diameter);
-        // t_manager.destroy_open_texture(self.buffer_id);
-        // self.buffer_id =
-        //     t_manager.init_open_texture(TextureData::new(&t_manager.t_creator, size, None));
-
-        self.sub_brush_diameter = new_size.clamp(1.0, 5000.0);
-
-        // NOTE: just use brush_diameter
-        // t_manager.open_textures[self.buffer_id].src =
-        //     Some(XYWH::new(0, 0, self.brush_diameter, self.brush_diameter));
-
+    pub fn mult_size(&mut self, t_manager: &mut TextureManager, by: f32) {
+        self.sub_brush_diameter *= by;
+        if by > 1.0 {
+            self.sub_brush_diameter = self.sub_brush_diameter.ceil();
+        } else {
+            self.sub_brush_diameter = self.sub_brush_diameter.floor();
+        }
+        self.sub_brush_diameter = self.sub_brush_diameter.clamp(1.0, 5000.0);
+        self.update_buffer(t_manager);
+    }
+    pub fn add_size(&mut self, t_manager: &mut TextureManager, add: f32) {
+        self.sub_brush_diameter += add;
+        self.sub_brush_diameter = self.sub_brush_diameter.clamp(1.0, 5000.0);
         self.update_buffer(t_manager);
     }
     pub fn process_stroke(
@@ -139,6 +143,7 @@ impl Brush {
                 let texture = &mut t_manager.draw_textures[unit.id];
                 self.draw_to_texture(
                     buffer_at.substract(unit.origin),
+                    data.color.get(),
                     &mut t_manager.canvas,
                     texture,
                     buffer,
@@ -192,7 +197,13 @@ impl Brush {
                     for tex in &texture_unit_vec {
                         let texture = &mut t_manager.draw_textures[tex.id];
                         let to_unit_coord = buffer_at.substract(tex.origin);
-                        self.draw_to_texture(to_unit_coord, &mut t_manager.canvas, texture, buffer);
+                        self.draw_to_texture(
+                            to_unit_coord,
+                            data.color.get(),
+                            &mut t_manager.canvas,
+                            texture,
+                            buffer,
+                        );
                     }
                 }
 
@@ -208,28 +219,48 @@ impl Brush {
     fn draw_to_texture(
         &mut self,
         buffer_at: XY,
+        color: Color,
         canvas: &mut Canvas<Window>,
         texture: &mut Texture,
         buffer: &mut TextureData,
     ) {
-        buffer
-            .texture
-            .set_color_mod(self.color.r, self.color.g, self.color.b);
+        buffer.texture.set_color_mod(color.r, color.g, color.b);
 
-        let dst = buffer_at
-            .to_tr_one(self.brush_diameter())
+        let diameter = self.brush_diameter();
+        let mut dst = buffer_at
+            .to_tr_one(diameter)
             .get_overlap(WH::new_one(DRAW_TEX_SIZE_I32));
         if dst.w == 0 || dst.h == 0 {
             return;
         }
 
-        let src = XYWH::new(-min(buffer_at.x, 0), -min(buffer_at.y, 0), dst.w, dst.h);
-        // let time = std::time::Instant::now();
+        // hax
+        if diameter == 1 {
+            dst.x -= 1;
+        }
 
+        let src = XYWH::new(-min(buffer_at.x, 0), -min(buffer_at.y, 0), dst.w, dst.h);
+
+        // let time = std::time::Instant::now();
+        if diameter == 3 {
+            canvas
+                .with_texture_canvas(texture, |c| {
+                    c.pixel(dst.x as i16 + 1, dst.y as i16, color).unwrap();
+                    c.pixel(dst.x as i16, dst.y as i16 + 1, color).unwrap();
+                    c.pixel(dst.x as i16 + 1, dst.y as i16 + 1, color).unwrap();
+                    c.pixel(dst.x as i16 + 2, dst.y as i16 + 1, color).unwrap();
+                    c.pixel(dst.x as i16 + 1, dst.y as i16 + 2, color).unwrap();
+                })
+                .unwrap();
+            return;
+        }
+        canvas
+            .with_texture_canvas(texture, |c| {
+                c.copy(&buffer.texture, Some(src.to_rect()), Some(dst.to_rect()))
+                    .unwrap();
+            })
+            .unwrap();
         //if draw_size is 256 - 12,800 us, overlap w 220 h 206 45320
-        let _ = canvas.with_texture_canvas(texture, |c| {
-            let _ = c.copy(&buffer.texture, Some(src.to_rect()), Some(dst.to_rect()));
-        });
         // print!("{}, ", time.elapsed().as_nanos());
         // println!("overlap {} {} {}", dst.w, dst.h, dst.w * dst.h);
     }

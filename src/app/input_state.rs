@@ -2,7 +2,7 @@ use sdl2::mouse::MouseButton;
 
 use crate::{d, dl};
 
-use super::{coords::XY, predefined::*};
+use super::{coords::XY, cursor::CursorManager, predefined::*};
 
 pub struct InputState {
     pub updated: bool,
@@ -10,11 +10,13 @@ pub struct InputState {
     pub delta: XY,
     pub states: [ButtonState; 6],
     pub interacting_with: Option<IdI32>,
+    pub start_holding_at: Option<XY>,
     pub shift: (bool, bool),
     pub ctrl: (bool, bool),
     pub alt: (bool, bool),
-    pub start_holding_at: Option<XY>,
     pub scroll_y: i32,
+    pub mouse_wrap_on: bool,
+    pub cursor: CursorManager,
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
@@ -26,21 +28,20 @@ pub enum ButtonState {
 }
 
 impl InputState {
-    pub fn new() -> InputState {
-        // NOTE: if pointer is held on launch - U/B
-        // NOTE: if poiter is not moved on launch - U/B
-        // FIXME: (optional)
+    pub fn new(cursor: CursorManager) -> InputState {
         InputState {
+            cursor,
             pos: XY::new(0, 0),
             updated: false,
             delta: XY::new(0, 0),
             states: [ButtonState::Idle; 6],
-            start_holding_at: None,
             interacting_with: None,
+            start_holding_at: None,
             shift: (false, false),
             ctrl: (false, false),
             alt: (false, false),
             scroll_y: 0,
+            mouse_wrap_on: false,
         }
     }
     pub fn left(&self) -> ButtonState {

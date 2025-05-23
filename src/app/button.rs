@@ -1,14 +1,10 @@
 use crate::app::action_pump::Action;
 
-use super::{action_pump::ActionPump, input_state::*, predefined::*};
+use super::{action_pump::*, input_state::*, predefined::*};
 
 pub struct Button {}
-// impl Button {
-//     pub const fn new(id: Id, bg_color: Option<Color>) -> Div {
-//     }
-// }
 impl Button {
-    pub fn before_collision(id: IdI32, actions: &mut ActionPump, input: &mut InputState) {
+    pub fn before_collision(id: IdI32, input: &mut InputState) {
         if input.left() == ButtonState::Pressed {
             // NOTE: this will only register the last sub button
             // TEST: this interaciton later
@@ -17,7 +13,7 @@ impl Button {
             // println!("interacting ");
         }
         if input.left() == ButtonState::Released && input.interacting_with == Some(id) {
-            actions.add(Action::ButtonPressed(id));
+            ActionPump::add(Action::ButtonPressed(id));
             // println!("action registered")
         }
     }

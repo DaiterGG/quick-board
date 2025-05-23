@@ -44,8 +44,8 @@ impl History {
         self.selected_h_step = Some(new_id);
 
         if let Some(leaf_id) = current_layer.leaf_id {
-            // trying to catch a bug
             // FIXME:
+            // trying to catch a bug
             if self.steps.get(leaf_id).is_none() {
                 d!("leaf not found");
                 d!(self.steps.len());
@@ -53,6 +53,7 @@ impl History {
                 dl!(self.selected_h_step);
                 panic!();
             }
+
             //modify leaf to point to new leaf
             self.steps[leaf_id].next_layer_step = Some(new_id);
             //update layer
@@ -78,6 +79,26 @@ impl History {
         self.layers.insert(insert_index, Layer::new());
         self.selected_layer = Some(insert_index);
         insert_index
+    }
+
+    pub fn undo(&mut self, t_manager: &mut TextureManager) {
+        if let Some(id) = self.selected_h_step {
+            self.finish_step(t_manager);
+            if id > 0 {
+                self.selected_h_step = Some(id - 1);
+            } else {
+                self.selected_h_step = None;
+            }
+        }
+    }
+    pub fn redo(&mut self) {
+        if let Some(id) = self.selected_h_step {
+            if id < self.steps.len() - 1 {
+                self.selected_h_step = Some(id + 1);
+            }
+        } else {
+            self.selected_h_step = Some(0);
+        }
     }
     pub fn full_draw(&self, t_manager: &mut TextureManager, data: &CanvasData, dst: XYWH) {
         if self.selected_h_step.is_none() {

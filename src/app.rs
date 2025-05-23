@@ -3,6 +3,7 @@ mod brush_tool;
 mod button;
 pub mod canvas_manager;
 mod color_map;
+pub mod color_operations;
 pub mod coords;
 pub mod cursor;
 mod drag;

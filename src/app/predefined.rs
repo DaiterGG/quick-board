@@ -33,9 +33,8 @@ markup! {{
         },
         RightTools:Div {
             IndButtons:Div,
-            GapButtonBrush:Div,
             BrushButton:Button,
-            GapButtonFill:Div,
+            GapButton:Div,
             MoveButton:Button
         },
         DrawWindow:DrawWindow

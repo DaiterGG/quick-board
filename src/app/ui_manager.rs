@@ -1,3 +1,5 @@
+use crate::dl;
+
 use super::{
     action_pump::ActionPump, coords::*, element_map::ElementMap, input_state::InputState,
     predefined::*, texture_manager::TextureManager, ui_element::*, ui_map::UIMap,
@@ -7,26 +9,25 @@ use sdl2::pixels::Color;
 
 /// layers: root elements (ids), z-indexed
 pub struct UIManager {
-    pub window_size: WH,
     layers: Vec<IdI32>,
     pub requires_update: bool,
     pub ui_scale: f32,
 }
 impl UIManager {
-    pub fn new(window_size: WH) -> Self {
+    pub fn new(window_hight: u32) -> Self {
         Self {
             layers: ElementMap::init_layers(),
             requires_update: true,
-            ui_scale: window_size.h as f32 / 1080f32,
-            window_size,
+            ui_scale: window_hight as f32 / 1080f32,
         }
     }
     /// called once per frame
-    pub fn update(&mut self, ui_map: &mut UIMap) {
+    pub fn update(&mut self, ui_map: &mut UIMap, t_manager: &mut TextureManager) {
         if !self.requires_update {
             return;
         }
-        let full_window = XYWH::new(0, 0, self.window_size.w, self.window_size.h);
+        let w_size = t_manager.canvas.window().size();
+        let full_window = XYWH::new(0, 0, w_size.0 as i32, w_size.1 as i32);
         for i in 0..self.layers.len() {
             let root_id = self.layers[i];
 
@@ -55,18 +56,12 @@ impl UIManager {
     }
 
     /// called once per frame
-    pub fn pointer_collision(
-        &mut self,
-        input: &mut InputState,
-        actions: &mut ActionPump,
-        ui_map: &mut UIMap,
-    ) {
+    pub fn pointer_collision(&mut self, input: &mut InputState, ui_map: &mut UIMap) {
         let mut prev_hit = false;
         // iterate z-index wise
         for i in (0..self.layers.len()).rev() {
             // if front layer was hit, rest of the layers can't be hit
-            prev_hit =
-                UIElement::pointer_collision_rec(self.layers[i], ui_map, input, !prev_hit, actions);
+            prev_hit = UIElement::pointer_collision_rec(self.layers[i], ui_map, input, !prev_hit);
         }
     }
 

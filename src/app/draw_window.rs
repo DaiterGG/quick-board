@@ -4,18 +4,24 @@ pub struct DrawWindow;
 impl DrawWindow {
     pub fn before_collision(
         id: IdI32,
-        actions: &mut ActionPump,
         input: &mut InputState,
         ui: &UIMap,
         was_hit: bool,
+        was_hit_before: bool,
     ) {
-        let element = &ui.elements[id as usize];
-        if was_hit && input.left() == ButtonState::Pressed {
-            input.interacting_with = Some(id);
+        if was_hit {
+            ActionPump::add(Action::CursorInCanvas(true));
+
+            if input.left() == ButtonState::Pressed {
+                input.interacting_with = Some(id);
+            }
         }
-        // if !was_hit && pointer.interacting_with == Some(id) {
-        //     pointer.interacting_with = None;
-        // }
+        if was_hit_before && input.left() == ButtonState::Idle {
+            ActionPump::add(Action::CursorInCanvas(false));
+        }
+        if !was_hit && input.left() == ButtonState::Released {
+            ActionPump::add(Action::CursorInCanvas(false));
+        }
         // if pointer.interacting_with == Some(id) {
         //     let canvas_hit = XY {
         //         x: pointer.pos.x - element.transform.x,

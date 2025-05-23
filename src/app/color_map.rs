@@ -9,6 +9,8 @@ pub enum ColorTag {
     Sub,
     FlashClick,
     Red,
+    Blue,
+    Green,
     Total,
 }
 pub const COLOR_COUNT: usize = ColorTag::Total as usize;
@@ -26,6 +28,8 @@ impl ColorMap {
         c[ColorTag::Sub as usize] = Color::RGB(0, 159, 177);
         c[ColorTag::FlashClick as usize] = Color::RGB(255, 255, 255);
         c[ColorTag::Red as usize] = Color::RGB(255, 0, 0);
+        c[ColorTag::Blue as usize] = Color::RGB(0, 0, 255);
+        c[ColorTag::Green as usize] = Color::RGB(0, 255, 0);
         ColorMap { colors: c }
     }
     pub fn get(&self, tag: ColorTag) -> Color {

@@ -1,18 +1,22 @@
+use crate::{d, dl};
+
 use super::coords::*;
 
-// pub enum Value {
-//     Pixels(i16),
-//     Persent(i16),
-// }
 #[derive(Copy, Clone, Debug)]
 pub struct Size {
     hor: i16,
     vert: i16,
-    hor_type: TreatAs,
-    vert_type: TreatAs,
+    hor_type: SizeTreatAs,
+    vert_type: SizeTreatAs,
+}
+#[derive(Copy, Clone, Debug)]
+pub enum SizeTreatAs {
+    PercentOfHor,
+    PercentOfVert,
+    JustPixels,
 }
 impl Size {
-    pub fn new(hor_type: TreatAs, hor: i16, vert_type: TreatAs, vert: i16) -> Self {
+    pub fn new(hor_type: SizeTreatAs, hor: i16, vert_type: SizeTreatAs, vert: i16) -> Self {
         Self {
             hor,
             vert,
@@ -20,11 +24,28 @@ impl Size {
             vert_type,
         }
     }
-    pub fn unrap(&self, length: i32, ui_scale: f32) -> WH {
-        WH::new(
-            unwrap(self.hor, self.hor_type, length, ui_scale),
-            unwrap(self.vert, self.vert_type, length, ui_scale),
-        )
+    pub fn new_one(size_type: SizeTreatAs, size: i16) -> Self {
+        Self {
+            hor: size,
+            vert: size,
+            hor_type: size_type,
+            vert_type: size_type,
+        }
+    }
+
+    pub fn unwrap(&self, length: WH, ui_scale: f32) -> WH {
+        let mut res = WH::new(0, 0);
+        res.w = match self.hor_type {
+            SizeTreatAs::PercentOfHor => (length.w * self.hor as i32) / 100,
+            SizeTreatAs::PercentOfVert => (length.h * self.hor as i32) / 100,
+            SizeTreatAs::JustPixels => (self.hor as f32 * ui_scale) as i32,
+        };
+        res.h = match self.vert_type {
+            SizeTreatAs::PercentOfHor => (length.w * self.vert as i32) / 100,
+            SizeTreatAs::PercentOfVert => (length.h * self.vert as i32) / 100,
+            SizeTreatAs::JustPixels => (self.vert as f32 * ui_scale) as i32,
+        };
+        res
     }
 }
 
@@ -64,7 +85,7 @@ pub enum Side {
 
 #[derive(Copy, Clone, Debug)]
 pub enum Direction {
-    Horisontal,
+    Horizontal,
     Vertical,
 }
 
@@ -85,7 +106,7 @@ pub enum Align {
 impl Default for Align {
     fn default() -> Self {
         Align::Block {
-            direction: Direction::Horisontal,
+            direction: Direction::Horizontal,
             side: Side::Start,
             length: Value::new(TreatAs::Percent, 100),
             gap: Value::new(TreatAs::Percent, 0),
@@ -93,7 +114,7 @@ impl Default for Align {
     }
 }
 impl Align {
-    pub const fn block(direction: Direction, side: Side, length: Value) -> Align {
+    pub const fn block(direction: Direction, side: Side, length: Value) -> Self {
         Align::Block {
             direction,
             side,
@@ -101,10 +122,10 @@ impl Align {
             gap: Value::new(TreatAs::Percent, 0),
         }
     }
-    pub const fn gap(&mut self, new_gap: Value) -> &mut Self {
-        match self {
+    pub const fn gap(mut self, new_gap: Value) -> Self {
+        match &mut self {
             Align::Block { gap, .. } => *gap = new_gap,
-            Align::Absolute { .. } => {}
+            _ => panic!("gap can only be applied to block"),
         }
         self
     }
@@ -133,7 +154,8 @@ impl Align {
                 align_by,
                 size,
             } => {
-                let absolute = size.unrap(window_to_fit.w, ui_scale);
+                let absolute = size.unwrap(window_to_fit.wh(), ui_scale);
+
                 let absolute_window_x = (window_to_fit.w * align_by.x) / 100;
                 let absolute_pivot_x = (absolute.w * pivot.x) / 100;
                 let new_x = (window_to_fit.x + absolute_window_x) - absolute_pivot_x;
@@ -141,9 +163,6 @@ impl Align {
                 let absolute_window_y = (window_to_fit.h * align_by.y) / 100;
                 let absolute_pivot_y = (absolute.h * pivot.y) / 100;
                 let new_y = (window_to_fit.y + absolute_window_y) - absolute_pivot_y;
-
-                // window_to_fit.w = absolute.w;
-                // window_to_fit.h = absolute.h;
 
                 XYWH::new(new_x, new_y, absolute.w, absolute.h)
             }
@@ -159,40 +178,46 @@ fn split_window(
     align_side: Side,
     align_direction: Direction,
     ui_scale: f32,
-    // TODO: test gap
     gap: &Value,
 ) -> XYWH {
     let mut block_to_fit = *window_to_split;
-    match align_direction {
-        Direction::Horisontal => {
-            let length = block_length.unwrap(window_to_split.w, ui_scale);
-            let gap_length = gap.unwrap(window_to_split.w, ui_scale);
-            block_to_fit.w = length;
-            window_to_split.w -= length + gap_length;
-            match align_side {
-                Side::Start => {
-                    window_to_split.x += length + gap_length;
-                }
-                Side::End => {
-                    block_to_fit.x += window_to_split.w;
-                }
-            }
+
+    // Destructure direction-dependent components
+    let (main_axis_length, main_axis_pos, block_axis_length, block_axis_pos) = match align_direction
+    {
+        Direction::Horizontal => (
+            &mut window_to_split.w,
+            &mut window_to_split.x,
+            &mut block_to_fit.w,
+            &mut block_to_fit.x,
+        ),
+        Direction::Vertical => (
+            &mut window_to_split.h,
+            &mut window_to_split.y,
+            &mut block_to_fit.h,
+            &mut block_to_fit.y,
+        ),
+    };
+
+    // Calculate lengths using original window size
+    let current_length = *main_axis_length;
+    let length = block_length.unwrap(current_length, ui_scale);
+    let gap_length = gap.unwrap(current_length, ui_scale);
+
+    // Update block and window dimensions
+    *block_axis_length = length;
+    *main_axis_length -= length + gap_length;
+
+    // Adjust positions based on alignment side
+    match align_side {
+        Side::Start => {
+            *main_axis_pos += length + gap_length;
         }
-        Direction::Vertical => {
-            let length = block_length.unwrap(window_to_split.h, ui_scale);
-            let gap_length = gap.unwrap(window_to_split.h, ui_scale);
-            block_to_fit.h = length;
-            window_to_split.h -= length + gap_length;
-            match align_side {
-                Side::Start => {
-                    window_to_split.y += length + gap_length;
-                }
-                Side::End => {
-                    block_to_fit.y += window_to_split.h;
-                }
-            }
+        Side::End => {
+            *block_axis_pos += *main_axis_length;
         }
     }
+
     block_to_fit
 }
 
@@ -209,7 +234,7 @@ mod tests {
             w_x in 0i32..8000,
             w_y in 0i32..8000) {
             let style = Align::block(
-                Direction::Horisontal,
+                Direction::Horizontal,
                 Side::Start,
                 Value::new(TreatAs::Pixels, abs),
             );

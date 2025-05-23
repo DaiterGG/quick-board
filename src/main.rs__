@@ -1,0 +1,85 @@
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+
+extern crate sdl2;
+
+mod app;
+mod debug;
+
+use std::{env, time::Duration};
+
+use app::texture_manager::TextureManager;
+use sdl2::{
+    event::Event,
+    gfx::primitives::DrawRenderer,
+    keyboard::Keycode,
+    pixels::{Color, PixelFormatEnum},
+    rect::Rect,
+    render::*,
+    surface::Surface,
+    sys::{
+        SDL_BlendFactor::*, SDL_BlendMode, SDL_BlendOperation::*, SDL_ComposeCustomBlendMode,
+        SDL_SetTextureBlendMode,
+    },
+    video::*,
+};
+
+const RAD: i16 = 600;
+const RAD_U32: u32 = RAD as u32;
+const COLOR: Color = Color::RGB(255, 0, 0);
+pub fn main() -> Result<(), String> {
+    let sdl = sdl2::init()?;
+    let mut event_pump = sdl.event_pump()?;
+    let video_subsystem = sdl.video()?;
+
+    let mut window = video_subsystem
+        .window("Quick Board", 600, 600)
+        .position_centered()
+        .resizable()
+        .opengl()
+        .build()
+        .map_err(|e| e.to_string())?;
+
+    let mut canvas: Canvas<Window> = CanvasBuilder::new(window)
+        .build()
+        .map_err(|e| e.to_string())?;
+
+    println!("Using SDL_Renderer \"{}\"", canvas.info().name);
+    let t_creator: TextureCreator<WindowContext> = canvas.texture_creator();
+
+    let rad = 1024;
+    // let rad = 1023; //looks fine
+    let mut texture = t_creator
+        .create_texture_target(
+            t_creator.default_pixel_format(),
+            rad as u32 * 2,
+            rad as u32 * 2,
+        )
+        .unwrap();
+    canvas
+        .with_texture_canvas(&mut texture, |c| {
+            c.filled_circle(rad, rad, rad, Color::RGBA(255, 0, 0, 255))
+                .unwrap();
+        })
+        .unwrap();
+
+    'main: loop {
+        canvas.set_draw_color(Color::RGB(0, 0, 0));
+        canvas.clear();
+        canvas.copy(&texture, None, None).unwrap();
+        canvas.present();
+        std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
+
+        for event in event_pump.poll_iter() {
+            match event {
+                Event::Quit { .. }
+                | Event::KeyDown {
+                    keycode: Some(Keycode::Escape),
+                    ..
+                } => break 'main,
+                _ => (),
+            }
+        }
+        // canvas.window_mut().set_size(1000, 700);
+    }
+    Ok(())
+}

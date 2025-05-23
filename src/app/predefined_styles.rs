@@ -8,9 +8,9 @@ use crate::app::{
 use super::{
     color_map::ColorTag,
     coords::XY,
-    predefined::{Id, IdI32, ID_COUNT},
+    predefined::{ID_COUNT, Id, IdI32},
     slider::Slider,
-    style_align::{Align, Direction, Side, Value},
+    style_align::{Align, Direction, Side, SizeTreatAs, Value},
     style_display::{Display, DisplayData},
 };
 
@@ -60,6 +60,7 @@ impl PredefinedStyles {
         use Id::*;
         use LockedTexId::*;
         use Side::*;
+        use SizeTreatAs::*;
         use TreatAs::*;
         use Value as V;
 
@@ -67,59 +68,64 @@ impl PredefinedStyles {
             .hovered(Data::bg(Sub))
             .pressed(Data::bg(FlashClick));
         let color_slider_handle_d = D::idle(Data::bg(MainLight));
+        let r = D::idle(Data::bg(Red));
+        let g = D::idle(Data::bg(Green));
+        let b = D::idle(Data::bg(Blue));
         styles! {
             // main elements block
             // root elements always absolute
-            RootMain: A [A::absolute(XY::new(0, 0), XY::new(0, 0), Size::new(Percent, 100, Percent, 100))],
+            RootMain: A [A::absolute(XY::new(0, 0), XY::new(0, 0), Size::new(PercentOfHor, 100, PercentOfVert, 100))],
 
             Header: A [A::block(Vertical, Start, V::new(Pixels, 50))],
             Header: D [D::idle(Data::bg(MainMiddle))],
 
-            RightWide: A [A::block(Horisontal, End, V::new(Pixels, 500))],
+            RightWide: A [A::block(Horizontal, End, V::new(Pixels, 500))],
             RightWide: D [D::idle(Data::bg(MainMiddle))],
 
-            HSV_H: A [A::block(Vertical, Start, V::new(Percent, 33))],
-            HSV_H: Slider [Slider::new(HSV_H_Handle as i32)],
+            ColorPicker: A [A::block(Vertical, Start, V::new(Percent, 50))],
+            PickerHSV: A [A::block(Vertical, Start, V::new(Pixels, 100))],
 
-            HSV_H_Handle: A [A::block(Vertical, Start, V::new(Pixels, 30))],
+            HSV_H: A [A::block(Vertical, Start, V::new(Percent, 34))],
+            HSV_H: D [D::idle(Data::transparent().locked_texture(HueRange))],
+            HSV_H: Slider [Slider::new(HSV_H_Handle as i32).within()],
+
+            HSV_S: A [A::block(Vertical, Start, V::new(Percent, 50))],
+            HSV_S: D [D::idle(Data::transparent().locked_texture(SaturationRange))],
+            HSV_S: Slider [Slider::new(HSV_S_Handle as i32).within()],
+
+            HSV_V: A [A::block(Vertical, Start, V::new(Percent, 100))],
+            HSV_V: D [D::idle(Data::transparent().locked_texture(ValueRange))],
+            HSV_V: Slider [Slider::new(HSV_V_Handle as i32).within()],
+
+            HSV_H_Handle: A [A::absolute(XY::new(0,50), XY::new(0,50), Size::new(JustPixels, 30, PercentOfVert, 100))],
             HSV_H_Handle: D [color_slider_handle_d],
-
-            HSV_S: A [A::block(Vertical, Start, V::new(Percent, 33))],
-            HSV_S: Slider [Slider::new(HSV_S_Handle as i32)],
-
-            HSV_S_Handle: A [A::block(Vertical, Start, V::new(Pixels, 30))],
+            HSV_S_Handle: A [A::absolute(XY::new(100,50), XY::new(100,50), Size::new(JustPixels, 30, PercentOfVert, 100))],
             HSV_S_Handle: D [color_slider_handle_d],
-
-            HSV_V: A [A::block(Vertical, Start, V::new(Percent, 33))],
-            HSV_V: Slider [Slider::new(HSV_V_Handle as i32)],
-
-            HSV_V_Handle: A [A::block(Vertical, Start, V::new(Pixels, 30))],
+            HSV_V_Handle: A [A::absolute(XY::new(100,50), XY::new(100,50), Size::new(JustPixels, 30, PercentOfVert, 100))],
             HSV_V_Handle: D [color_slider_handle_d],
 
-            ColorPicker: A [A::block(Vertical, Start, V::new(Percent, 50))],
-            ToolSettings: A [A::block(Vertical, Start, V::new(Percent, 50))],
+            ToolSettings: A [A::block(Vertical, Start, V::new(Percent, 100))],
 
-            ToolSize: A [A::block(Vertical, Start, V::new(Percent, 50))],
-            ToolSizeText: A [A::block(Horisontal, Start, V::new(Percent, 50))],
+            ToolSize: A [A::block(Vertical, Start, V::new(Pixels, 44))],
+            ToolSizeText: A [A::block(Horizontal, Start, V::new(Percent, 50))],
 
-            ToolSizeDrag: A [A::block(Horisontal, Start, V::new(Percent, 50))],
+            ToolSizeDrag: A [A::block(Horizontal, Start, V::new(Percent, 50))],
             ToolSizeDrag: D [D::idle(Data::bg(MainDark)).hovered(Data::bg(Sub)).pressed(Data::bg(FlashClick))],
 
 
-            RightTools: A [A::block(Horisontal, End, V::new(Pixels, 50))],
+            RightTools: A [A::block(Horizontal, End, V::new(Pixels, 50))],
             RightTools: D [D::idle(Data::bg(MainMiddle))],
 
             IndButtons: A [A::block(Vertical, Start, V::new(Pixels, 3))],
 
-            BrushButton: A [A::absolute(XY::new(50, 0), XY::new(50, 0), Size::new(Pixels, 44, Pixels, 44))],
+            BrushButton: A [A::absolute(XY::new(50, 0), XY::new(50, 0), Size::new_one(PercentOfHor, 90))],
             BrushButton: D [tool_button_d],
 
-            GapButtonBrush: A [A::block(Vertical, Start, V::new(Pixels, 47))],
-            GapButtonFill: A [A::block(Vertical, Start, V::new(Pixels, 47))],
-
-            MoveButton: A [A::absolute(XY::new(50, 0), XY::new(50, 0), Size::new(Pixels, 44, Pixels, 44))],
+            MoveButton: A [A::absolute(XY::new(50, 0), XY::new(50, 0), Size::new_one(PercentOfHor, 90))],
             MoveButton: D [tool_button_d],
 
+            GapButton: A [A::block(Vertical, Start, V::new(Pixels, 47))],
+            // GapButtonBrush: A [A::block(Vertical, Start, V::new(Pixels, 47))],
 
             DrawWindow: D [D::idle(Data::transparent())],
         }

@@ -36,6 +36,5 @@ impl Move {
             y: (dif_y * data.screen_zoom) as i32,
         };
         data.screen_pos = data.screen_pos.substract(ui_dif);
-        data.update_cursor = true;
     }
 }

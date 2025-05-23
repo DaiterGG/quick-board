@@ -128,6 +128,7 @@ impl XY {
         }
     }
 }
+#[derive(Copy, Clone, Debug)]
 pub struct XYF32 {
     pub x: f32,
     pub y: f32,

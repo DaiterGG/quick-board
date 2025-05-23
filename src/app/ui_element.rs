@@ -35,14 +35,15 @@ impl UIElement {
         ui_map: &mut UIMap,
         input: &mut InputState,
         parrent_hit: bool,
-        actions: &mut ActionPump,
     ) -> bool {
-        // if parrent wasn't hit, then children are not calculated
+        // if parrent wasn't hit, then children are false
         let hit = parrent_hit && input.pos.is_within(ui_map.elements[id as usize].transform);
+        let mut was_hit_before = false;
 
         use ButtonState as B;
         use DisplayState as D;
         if let Some(dis) = &mut ui_map.displays[id as usize] {
+            was_hit_before = !hit && dis.active_states[D::Hovered as usize];
             dis.set_state(D::Hovered, hit);
             dis.set_state(D::Pressed, input.left() == B::Pressed && hit);
             dis.set_state(D::Held, input.left() == B::Held && hit);
@@ -54,16 +55,16 @@ impl UIElement {
         use ElementType as T;
         match ui_map.elements[id as usize].element_type {
             T::Button if hit => {
-                Button::before_collision(id, actions, input);
+                Button::before_collision(id, input);
             }
             T::DrawWindow => {
-                DrawWindow::before_collision(id, actions, input, ui_map, hit);
+                DrawWindow::before_collision(id, input, ui_map, hit, was_hit_before);
             }
             T::Drag => {
-                Drag::before_collision(id, actions, input, hit);
+                Drag::before_collision(id, input, hit);
             }
             T::Slider => {
-                Slider::before_collision(id, actions, input, ui_map, hit);
+                Slider::before_collision(id, input, ui_map, hit);
             }
             _ => {} //div
         }
@@ -74,7 +75,6 @@ impl UIElement {
                 ui_map,
                 input,
                 hit,
-                actions,
             );
         }
 

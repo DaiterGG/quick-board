@@ -6,14 +6,21 @@ extern crate sdl2;
 mod app;
 mod debug;
 
-use std::{env, time::*};
+use std::{cell::RefCell, env, sync::OnceLock, time::*};
 
 use app::{
-    action_pump::ActionPump, canvas_manager::CanvasManager, coords::WH, cursor::CanvasCursor,
-    event_manager::EventManager, input_state::InputState, predefined::Id, texture_manager::*,
-    ui_manager::UIManager, ui_map::UIMap,
+    action_pump::{A_PUMP, ActionPump},
+    canvas_manager::CanvasManager,
+    coords::WH,
+    cursor::CursorManager,
+    event_manager::EventManager,
+    input_state::InputState,
+    predefined::Id,
+    texture_manager::*,
+    ui_manager::UIManager,
+    ui_map::UIMap,
 };
-use sdl2::{image::*, video::*};
+use sdl2::{VideoSubsystem, image::*, mouse::MouseUtil, pixels::Color, rect::Rect, video::*};
 
 pub fn main() -> Result<(), String> {
     unsafe {
@@ -23,7 +30,7 @@ pub fn main() -> Result<(), String> {
     let video_subsystem = sdl.video()?;
     let _image_context = sdl2::image::init(InitFlag::PNG | InitFlag::JPG)?;
     let mut event_manager = EventManager::new(&sdl)?;
-    let mut window_size = if let Ok(DisplayMode { w, h, .. }) = video_subsystem.display_mode(0, 0) {
+    let window_size = if let Ok(DisplayMode { w, h, .. }) = video_subsystem.display_mode(0, 0) {
         WH {
             w: (w as f32 * 0.60) as i32,
             h: (h as f32 * 0.60) as i32,
@@ -31,31 +38,29 @@ pub fn main() -> Result<(), String> {
     } else {
         WH { w: 1920, h: 1080 }
     };
+
+    let bpr = init_biggest_possible_display_res(&video_subsystem);
+
     let window = video_subsystem
         .window("Quick Board", window_size.w as u32, window_size.h as u32)
-        // .maximized()
         .position_centered()
         .resizable()
         .opengl()
-        // .vulkan()
         .build()
         .map_err(|e| e.to_string())?;
 
-    //update window size if it is maximized
-    let ws = window.size();
-    window_size = WH {
-        w: ws.0 as i32,
-        h: ws.1 as i32,
-    };
-
-    let mut input = InputState::new();
-    let mut ui_manager = UIManager::new(window_size);
-    let mut actions = ActionPump::new();
-    // TODO: move video_subsystem to texture manager
-    let mut texture_manager = TextureManager::new(&video_subsystem, window);
+    ActionPump::init();
+    let mut texture_manager = TextureManager::new(window, bpr);
+    let mut ui_manager = UIManager::new(texture_manager.canvas.window().size().1);
     let mut ui_map = UIMap::new();
     let mut canvas_manager =
         CanvasManager::new(&mut texture_manager, &mut ui_map, Id::DrawWindow as i32);
+    let cursor_manager = CursorManager::new(
+        canvas_manager.data.screen_zoom,
+        canvas_manager.tools.get_size(canvas_manager.current_tool),
+        bpr,
+    );
+    let mut input = InputState::new(cursor_manager);
 
     // let mut fps = FPSManager::new();
     // println!("err {:?}", fps.set_framerate(200));
@@ -66,39 +71,43 @@ pub fn main() -> Result<(), String> {
     let mut frames = 0;
     'main: loop {
         // Get the input and updates from user
-        let res = event_manager.handle_events(&mut input, &mut ui_manager, &mut actions);
+        let res =
+            event_manager.handle_events(&mut input, &mut ui_manager, &mut texture_manager, &sdl);
         if res == Ok(true) {
             break 'main;
         }
 
         // Check if user triggered some ui events
-        ui_manager.pointer_collision(&mut input, &mut actions, &mut ui_map);
+        ui_manager.pointer_collision(&mut input, &mut ui_map);
 
         // Apply the actions, registered by the user
-        actions.apply(
+        ActionPump::apply(
             &mut canvas_manager,
             &mut ui_manager,
-            &input,
+            &mut input,
             &mut texture_manager,
         );
 
         // Update the UI layout if nessesary
-        ui_manager.update(&mut ui_map);
+        ui_manager.update(&mut ui_map, &mut texture_manager);
 
         // Update canvas, if layout changed, use tool if needed
-        canvas_manager.update(&input, &mut ui_map, &mut texture_manager);
+        canvas_manager.update(&mut input, &mut ui_map, &mut texture_manager);
 
         // Draw the UI
         ui_manager.draw_ui(&ui_map, &mut texture_manager);
-
-        //tell the data, that the frame is over
-        input.reset();
 
         // buffer draw textures
         if lazy_buffer.elapsed() >= Duration::from_millis(20) {
             texture_manager.buffer_draw_texture();
             lazy_buffer = Instant::now();
         }
+
+        //tell the data, that the frame is over
+        input.reset();
+
+        // sdl.mouse()
+        //     .warp_mouse_in_window(&texture_manager.canvas.window(), 50, 50);
 
         // std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 200));
         // fps.delay();
@@ -119,4 +128,22 @@ pub fn main() -> Result<(), String> {
         }
     }
     Ok(())
+}
+fn init_biggest_possible_display_res(video_subsystem: &VideoSubsystem) -> i32 {
+    // reasonable minimum values
+    let mut max_wh = 500;
+    let count = video_subsystem.num_video_displays().unwrap_or(1);
+    for i in 0..count {
+        for mode in 0..video_subsystem.num_display_modes(i).unwrap_or(1) {
+            if let Ok(res) = video_subsystem.display_mode(i, mode) {
+                if res.w > max_wh {
+                    max_wh = res.w;
+                }
+                if res.h > max_wh {
+                    max_wh = res.h;
+                }
+            }
+        }
+    }
+    max_wh
 }

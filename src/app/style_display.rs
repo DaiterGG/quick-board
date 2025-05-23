@@ -8,6 +8,7 @@ use sdl2::video::Window;
 
 use super::color_map::*;
 use super::coords::*;
+use super::texture_data::TextureData;
 use super::texture_manager::*;
 
 #[derive(Debug)]
@@ -165,52 +166,58 @@ impl DisplayData {
         self.edge_radius = radius;
         self
     }
-    fn draw(&self, element_pos: XYWH, colors: &ColorMap, textures: &mut TextureManager) {
+    fn draw(&self, element_pos: XYWH, colors: &ColorMap, t_manager: &mut TextureManager) {
         if let Some(main) = self.color {
-            main.apply(&mut textures.canvas, colors, element_pos);
+            main.apply(&mut t_manager.canvas, colors, element_pos);
         }
 
         match self.texture_id {
-            // TexId::Locked(id) => {
-            //     let data = textures.locked_texture(id);
-            //     let dst = if let Some(dst) = data.dst {
-            //         Some(dst)
-            //     } else {
-            //         Some(element_pos.to_rect())
-            //     };
-            //     let _ = canvas.copy(&data.texture, data.src, dst);
-            // }
+            TexId::Locked(id) => {
+                Self::apply_texture(
+                    &mut t_manager.canvas,
+                    t_manager.locked_textures[id as usize].as_ref().unwrap(),
+                    element_pos,
+                );
+            }
             TexId::Open(id) => {
-                let data = &textures.open_textures[id as usize];
-                let dst = if let Some(dst) = data.dst {
-                    Some(Rect::new(
-                        element_pos.x + dst.x,
-                        element_pos.y + dst.y,
-                        dst.w as u32,
-                        dst.h as u32,
-                    ))
-                } else {
-                    Some(element_pos.to_rect())
-                };
-                let src = if let Some(src) = data.src {
-                    Some(src.to_rect())
-                } else {
-                    None
-                };
-                let _ = textures.canvas.copy(&data.texture, src, dst);
+                Self::apply_texture(
+                    &mut t_manager.canvas,
+                    &t_manager.open_textures[id as usize],
+                    element_pos,
+                );
             }
             _ => {}
-        }
+        };
 
         if let Some(sub) = self.sub_color {
-            sub.apply(&mut textures.canvas, colors, element_pos);
+            sub.apply(&mut t_manager.canvas, colors, element_pos);
         }
-        // TODO: Draw border
-        // canvas.rect(
-        //     XYWH::new(pos.x, pos.y, pos.w, pos.h),
-        //     border_color,
-        //     border_width,
-        // );
+
+        // if let Some(bord) = self.border {
+        //     t_manager.canvas.rect(
+        //         XYWH::new(pos.x, pos.y, pos.w, pos.h),
+        //         border_color,
+        //         border_width,
+        //     );
+        // }
+    }
+    fn apply_texture(canvas: &mut Canvas<Window>, data: &TextureData, element_pos: XYWH) {
+        let dst = if let Some(dst) = data.dst {
+            Some(Rect::new(
+                element_pos.x + dst.x,
+                element_pos.y + dst.y,
+                dst.w as u32,
+                dst.h as u32,
+            ))
+        } else {
+            Some(element_pos.to_rect())
+        };
+        let src = if let Some(src) = data.src {
+            Some(src.to_rect())
+        } else {
+            None
+        };
+        let _ = canvas.copy(&data.texture, src, dst);
     }
 }
 #[derive(Copy, Clone, Debug)]

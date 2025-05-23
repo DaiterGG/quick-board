@@ -1,8 +1,10 @@
-use std::cmp::*;
+use std::{cmp::*, mem::swap, thread::sleep_ms};
 
+use app::color_operations::ColorOperations;
 use sdl2::{
     VideoSubsystem,
     pixels::{Color, PixelFormatEnum},
+    rect::Rect,
     render::*,
     video::*,
 };
@@ -14,13 +16,16 @@ use super::{coords::*, texture_data::TextureData};
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum LockedTexId {
     IconBrush,
+    HueRange,
+    ValueRange,
+    SaturationRange,
     Total,
 }
 pub const DRAW_TEX_SIZE: u32 = 512;
 pub const DRAW_TEX_SIZE_I32: i32 = DRAW_TEX_SIZE as i32;
 pub struct TextureManager {
     pub t_creator: TextureCreator<WindowContext>,
-    pub biggest_possible_resolution: WH,
+    pub biggest_possible_resolution: i32,
     pub canvas: Canvas<Window>,
     // icons
     pub locked_textures: [Option<TextureData>; LockedTexId::Total as usize],
@@ -29,50 +34,41 @@ pub struct TextureManager {
     // DRAW_TEX_SIZExDRAW_TEX_SIZE textures, used for drawing or static for storage
     pub draw_textures: Vec<Texture>,
     // buffers, to reduce texture creations
-    target_textures_count: usize,
+    pub used_target_textures: Vec<usize>,
     pub unused_target_textures: Vec<usize>,
     pub unused_static_textures: Vec<usize>,
 }
 impl TextureManager {
-    pub fn new(video_subsystem: &VideoSubsystem, window: Window) -> Self {
+    pub fn new(window: Window, bpr: i32) -> Self {
         let canvas: Canvas<Window> = CanvasBuilder::new(window)
             .build()
             .expect("Failed to create canvas");
 
         println!("Using SDL_Renderer \"{}\"", canvas.info().name);
         let t_creator: TextureCreator<WindowContext> = canvas.texture_creator();
-        let big = Self::init_biggest_possible_display_res(video_subsystem);
-        let mut p = [const { None }; LockedTexId::Total as usize];
-        p[LockedTexId::IconBrush as usize] = TextureData::some(&t_creator, WH::new(32, 32));
+
+        let mut p = [const { None }; Total as usize];
+        use LockedTexId::*;
+        use PixelFormatEnum::*;
+        use TextureData as T;
+
+        p[IconBrush as usize] = T::some(&t_creator, WH::new(32, 32));
+
+        p[HueRange as usize] = T::some(&t_creator, WH::new(256 * 3, 1));
+        p[SaturationRange as usize] = T::some(&t_creator, WH::new(256, 1));
+        p[ValueRange as usize] = T::some(&t_creator, WH::new(256, 1));
 
         Self {
             canvas,
             t_creator,
-            biggest_possible_resolution: big,
+            biggest_possible_resolution: bpr,
             locked_textures: p,
             open_textures: Vec::new(),
             draw_textures: Vec::new(),
-            target_textures_count: 0,
+            used_target_textures: Vec::new(),
             unused_target_textures: Vec::new(),
             unused_static_textures: Vec::new(),
         }
-    }
-    fn init_biggest_possible_display_res(video_subsystem: &VideoSubsystem) -> WH {
-        // reasonable minimum values
-        let mut max_wh = WH { w: 1000, h: 500 };
-        let count = video_subsystem.num_video_displays().unwrap_or(1);
-        for i in 0..count {
-            // TODO: find what mode_index is
-            if let Ok(res) = video_subsystem.display_mode(i, 0) {
-                if res.w > max_wh.w {
-                    max_wh.w = res.w;
-                }
-                if res.h > max_wh.h {
-                    max_wh.h = res.h;
-                }
-            }
-        }
-        max_wh
     }
     pub fn locked_texture(&self, id: LockedTexId) -> &TextureData {
         if let Some(t) = &self.locked_textures[id as usize] {
@@ -99,13 +95,16 @@ impl TextureManager {
         }
     }
     pub fn init_target_texture(&mut self) -> usize {
-        if self.unused_target_textures.len() > 0 {
-            return self.unused_target_textures.pop().unwrap();
-        }
-        self.new_target_texture()
+        let new = if !self.unused_target_textures.is_empty() {
+            self.unused_target_textures.pop().unwrap()
+        } else {
+            self.new_target_texture()
+        };
+        self.used_target_textures.push(new);
+        new
     }
     fn init_static_texture(&mut self) -> usize {
-        if self.unused_static_textures.len() > 0 {
+        if !self.unused_static_textures.is_empty() {
             return self.unused_static_textures.pop().unwrap();
         }
         self.new_static_texture()
@@ -130,6 +129,7 @@ impl TextureManager {
 
         // stat_id is now target_id, target is not used
         self.unused_target_textures.push(stat_id);
+        self.used_target_textures.retain(|x| *x != target_id);
     }
     pub fn buffer_draw_texture(&mut self) {
         if self.unused_target_textures.len() < 10 {
@@ -137,9 +137,7 @@ impl TextureManager {
             let id = self.new_target_texture();
             self.unused_target_textures.push(id);
         }
-        if self.target_textures_count - self.unused_target_textures.len()
-            > self.unused_static_textures.len()
-        {
+        if self.used_target_textures.len() > self.unused_static_textures.len() {
             let id = self.new_static_texture();
             self.unused_static_textures.push(id);
         }
@@ -150,8 +148,7 @@ impl TextureManager {
             .t_creator
             .create_texture_static(PixelFormatEnum::RGBA8888, DRAW_TEX_SIZE, DRAW_TEX_SIZE)
             .expect("Failed to create static texture");
-        tex.set_blend_mode(BlendMode::Add);
-        // tex.set_blend_mode(BlendMode::Blend);
+        tex.set_blend_mode(BlendMode::Blend);
 
         self.draw_textures.push(tex);
         id
@@ -162,11 +159,33 @@ impl TextureManager {
             .t_creator
             .create_texture_target(PixelFormatEnum::RGBA8888, DRAW_TEX_SIZE, DRAW_TEX_SIZE)
             .expect("Failed to create target texture");
-        tex.set_blend_mode(BlendMode::Add);
-        // tex.set_blend_mode(BlendMode::Blend);
+        tex.set_blend_mode(BlendMode::Blend);
 
         self.draw_textures.push(tex);
-        self.target_textures_count += 1;
         id
+    }
+    // static palettes
+    pub fn init_palettes(&mut self) {
+        let hue = self.locked_textures[LockedTexId::HueRange as usize]
+            .as_mut()
+            .unwrap();
+        hue.texture
+            .update(None, &ColorOperations::hue_palette(), 256 * 4 * 3)
+            .unwrap();
+    }
+    // dynamic palettes
+    pub fn update_palettes(&mut self, color: Color) {
+        let sat = self.locked_textures[LockedTexId::SaturationRange as usize]
+            .as_mut()
+            .unwrap();
+        sat.texture
+            .update(None, &ColorOperations::saturation_palette(color), 256 * 4)
+            .unwrap();
+        let val = self.locked_textures[LockedTexId::ValueRange as usize]
+            .as_mut()
+            .unwrap();
+        val.texture
+            .update(None, &ColorOperations::value_palette(color), 256 * 4)
+            .unwrap();
     }
 }
