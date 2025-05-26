@@ -2,7 +2,7 @@ use num::Float;
 use num::cast::ToPrimitive;
 use std::cmp::*;
 
-use sdl2::rect::{FRect, Rect};
+use sdl2::rect::*;
 
 use crate::*;
 
@@ -47,7 +47,7 @@ impl HistoryStep {
     }
     pub fn get_textures(
         &mut self,
-        bound: XXYY,
+        bound: AABB,
         canvas_transform: XYWH,
         t_manager: &mut TextureManager,
     ) -> Vec<TextureUnit> {

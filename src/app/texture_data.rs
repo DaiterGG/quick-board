@@ -1,4 +1,4 @@
-use sdl2::{pixels::PixelFormatEnum, render::*, video::WindowContext};
+use sdl2::{image::LoadTexture, pixels::PixelFormatEnum, render::*, video::WindowContext};
 
 use crate::dl;
 
@@ -38,5 +38,18 @@ impl TextureData {
     }
     pub fn some(t_creator: &TextureCreator<WindowContext>, size: WH) -> Option<TextureData> {
         Some(Self::new(t_creator, size, None, None))
+    }
+    pub fn from_bytes(
+        t_creator: &TextureCreator<WindowContext>,
+        bytes: &[u8],
+        // size: WH,
+    ) -> Option<TextureData> {
+        let texture = t_creator.load_texture_bytes(bytes).unwrap();
+        Some(Self {
+            texture,
+            src: None,
+            dst: None,
+            // size,
+        })
     }
 }

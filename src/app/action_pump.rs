@@ -1,3 +1,5 @@
+use sdl2::pixels::Color;
+
 use crate::app::canvas_manager;
 use crate::app::color_operations::ColorOperations;
 use crate::dl;
@@ -22,26 +24,30 @@ pub enum Action {
     Redo,
     Drag(IdI32, XYF32),
     SliderLine(IdI32, f32),
-    SladerCoord(IdI32, XYF32),
+    SliderCoord(IdI32, XYF32),
     BrushSize(bool),
     CursorInCanvas(bool),
     UIUpdate,
     WindowResized,
 
     //observers
-    ColorChanged,
+    ColorChanged(Color),
 }
 
 pub static A_PUMP: OnceLock<ActionPump> = OnceLock::new();
 
 pub struct ActionPump {
     pub actions: Mutex<Vec<Action>>,
+    pub notify_back: Mutex<Vec<IdI32>>,
 }
 impl ActionPump {
     pub fn init() {
-        A_PUMP.set(ActionPump {
-            actions: Mutex::new(Vec::new()),
-        });
+        A_PUMP
+            .set(ActionPump {
+                actions: Mutex::new(Vec::new()),
+                notify_back: Mutex::new(Vec::new()),
+            })
+            .unwrap_or_else(|_| panic!("OnceLock init error"))
     }
 
     pub fn add(action: Action) {
@@ -102,33 +108,28 @@ impl ActionPump {
                     ui.requires_update = true;
                 }
 
-                ColorChanged => {
-                    t_manager.update_palettes(c_manager.data.color.get());
+                ColorChanged(color) => {
+                    t_manager.update_palettes(color);
                 }
                 _ => (),
             }
         }
     }
 }
-pub struct Observed<T> {
+pub struct Observed<T: Sized> {
     value: T,
-    action: Action,
+    action: Box<dyn Fn(T) -> Action>,
 }
 impl<T: Copy> Observed<T> {
     pub fn get(&self) -> T {
         self.value
     }
-}
-impl<T> Observed<T> {
-    pub fn new(value: T, action: Action) -> Observed<T> {
-        ActionPump::add(action);
+    pub fn new(value: T, action: Box<dyn Fn(T) -> Action>) -> Observed<T> {
+        ActionPump::add(action(value));
         Observed { value, action }
     }
-    // pub fn get_ref(&self) -> &T {
-    //     &self.value
-    // }
     pub fn set(&mut self, value: T) {
         self.value = value;
-        ActionPump::add(self.action);
+        ActionPump::add((self.action)(self.value));
     }
 }

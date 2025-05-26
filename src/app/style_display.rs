@@ -1,11 +1,13 @@
 use std::cmp::*;
 
-use sdl2::pixels::Color;
 use sdl2::rect::Rect;
-use sdl2::render::BlendMode::Blend;
 use sdl2::render::*;
 use sdl2::video::Window;
 
+use crate::dl;
+
+use super::border::Border;
+use super::color_display::ColorDisplay;
 use super::color_map::*;
 use super::coords::*;
 use super::texture_data::TextureData;
@@ -14,8 +16,8 @@ use super::texture_manager::*;
 #[derive(Debug)]
 pub enum DisplayState {
     Idle,
-    Active,
-    Disabled,
+    // Active,
+    // Disabled,
     Hovered,
     Pressed,
     Held,
@@ -50,6 +52,7 @@ impl Display {
         dis.active_states[DisplayState::Idle as usize] = true;
         dis
     }
+
     pub fn hovered(mut self, data: DisplayData) -> Self {
         self.states_data[DisplayState::Hovered as usize] = Some(data);
         self
@@ -106,19 +109,6 @@ enum TexId {
     Open(i32),
     None,
 }
-// impl Clone for DisplayData {
-//     fn clone(&self) -> Self {
-//         assert!(self.texture_id == TexId::None);
-//         DisplayData {
-//             texture_id: TexId::None,
-//             draw_at_front: self.draw_at_front,
-//             color: self.color,
-//             sub_color: self.sub_color,
-//             edge_radius: self.edge_radius,
-//             border: self.border.clone(),
-//         }
-//     }
-// }
 impl DisplayData {
     pub fn transparent() -> Self {
         DisplayData {
@@ -193,13 +183,9 @@ impl DisplayData {
             sub.apply(&mut t_manager.canvas, colors, element_pos);
         }
 
-        // if let Some(bord) = self.border {
-        //     t_manager.canvas.rect(
-        //         XYWH::new(pos.x, pos.y, pos.w, pos.h),
-        //         border_color,
-        //         border_width,
-        //     );
-        // }
+        if let Some(bord) = self.border {
+            bord.apply(&mut t_manager.canvas, colors, element_pos);
+        }
     }
     fn apply_texture(canvas: &mut Canvas<Window>, data: &TextureData, element_pos: XYWH) {
         let dst = if let Some(dst) = data.dst {
@@ -212,36 +198,20 @@ impl DisplayData {
         } else {
             Some(element_pos.to_rect())
         };
-        let src = if let Some(src) = data.src {
-            Some(src.to_rect())
-        } else {
-            None
-        };
-        let _ = canvas.copy(&data.texture, src, dst);
+        let src = data.src.map(|src| src.to_rect());
+        canvas.copy(&data.texture, src, dst).unwrap();
     }
 }
-#[derive(Copy, Clone, Debug)]
-struct Border {
-    color: ColorTag,
-    width: u8,
-}
-#[derive(Copy, Clone)]
-struct ColorDisplay {
-    color: ColorTag,
-    alfa: u8,
-}
-impl ColorDisplay {
-    pub fn full(color: ColorTag) -> Self {
-        Self { color, alfa: 255 }
-    }
-    pub fn with_alfa(color: ColorTag, alfa: u8) -> Self {
-        Self { color, alfa }
-    }
-    pub fn apply(&self, canvas: &mut Canvas<Window>, colors: &ColorMap, pos: XYWH) {
-        let mut rgba: Color = colors.get(self.color);
-        rgba.a = self.alfa as u8;
-        canvas.set_draw_color(rgba);
-        canvas.set_blend_mode(Blend);
-        let _ = canvas.fill_rect(Rect::new(pos.x, pos.y, pos.w as u32, pos.h as u32));
-    }
-}
+// impl Clone for DisplayData {
+//     fn clone(&self) -> Self {
+//         assert!(self.texture_id == TexId::None);
+//         DisplayData {
+//             texture_id: TexId::None,
+//             draw_at_front: self.draw_at_front,
+//             color: self.color,
+//             sub_color: self.sub_color,
+//             edge_radius: self.edge_radius,
+//             border: self.border.clone(),
+//         }
+//     }
+// }

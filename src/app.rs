@@ -1,7 +1,9 @@
 pub mod action_pump;
+mod border;
 mod brush_tool;
 mod button;
 pub mod canvas_manager;
+mod color_display;
 mod color_map;
 pub mod color_operations;
 pub mod coords;

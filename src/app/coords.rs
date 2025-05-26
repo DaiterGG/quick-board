@@ -94,16 +94,21 @@ impl XY {
             + (self.y - distance_to.y) as f64 * (self.y - distance_to.y) as f64) as f32)
             .sqrt()
     }
-    pub fn bound_between(self, other: XY) -> XXYY {
-        XXYY::new(
-            min(self.x, other.x),
-            max(self.x, other.x),
-            min(self.y, other.y),
-            max(self.y, other.y),
-        )
+    pub fn bound_between(self, other: XY) -> AABB {
+        AABB {
+            xa: min(self.x, other.x),
+            ya: min(self.y, other.y),
+            xb: max(self.x, other.x),
+            yb: max(self.y, other.y),
+        }
     }
-    pub fn to_bound(self) -> XXYY {
-        XXYY::new(self.x, self.x, self.y, self.y)
+    pub fn to_bound(self) -> AABB {
+        AABB {
+            xa: self.x,
+            ya: self.y,
+            xb: self.x,
+            yb: self.y,
+        }
     }
     pub fn to_tr_one(self, wh: i32) -> XYWH {
         XYWH {
@@ -223,26 +228,31 @@ impl XYWH {
             h: 0,
         }
     }
-    pub fn to_bound(&self) -> XXYY {
-        XXYY::new(self.x, self.x + self.w, self.y, self.y + self.h)
+    pub fn to_bound(&self) -> AABB {
+        AABB {
+            xa: self.x,
+            ya: self.y,
+            xb: self.x + self.w,
+            yb: self.y + self.h,
+        }
     }
 }
 #[derive(Copy, Clone, Debug)]
-pub struct XXYY {
+pub struct AABB {
     pub xa: i32,
-    pub xb: i32,
     pub ya: i32,
+    pub xb: i32,
     pub yb: i32,
 }
-impl XXYY {
-    pub fn new(xa: i32, xb: i32, ya: i32, yb: i32) -> Self {
-        Self { xa, xb, ya, yb }
+impl AABB {
+    pub fn new(xa: i32, ya: i32, xb: i32, yb: i32) -> Self {
+        Self { xa, ya, xb, yb }
     }
     pub fn expand_one(&mut self, xy: i32) -> Self {
         Self {
             xa: self.xa - xy,
-            xb: self.xb + xy,
             ya: self.ya - xy,
+            xb: self.xb + xy,
             yb: self.yb + xy,
         }
     }
@@ -254,7 +264,7 @@ impl XXYY {
             yb: self.yb + y,
         }
     }
-    pub fn is_overlaping(&self, other: XXYY) -> bool {
+    pub fn is_overlaping(&self, other: AABB) -> bool {
         self.xa <= other.xb && self.xb >= other.xa && self.ya <= other.yb && self.yb >= other.ya
     }
 }

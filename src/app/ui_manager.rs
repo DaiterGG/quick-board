@@ -1,12 +1,12 @@
 use crate::dl;
 
 use super::{
-    action_pump::ActionPump, coords::*, element_map::ElementMap, input_state::InputState,
-    predefined::*, texture_manager::TextureManager, ui_element::*, ui_map::UIMap,
+    action_pump::ActionPump, color_map::ColorTag, coords::*, element_map::ElementMap,
+    input_state::InputState, predefined::*, texture_manager::TextureManager, ui_element::*,
+    ui_map::UIMap,
 };
 
-use sdl2::pixels::Color;
-
+const UI_SCALE: f32 = 1.0;
 /// layers: root elements (ids), z-indexed
 pub struct UIManager {
     layers: Vec<IdI32>,
@@ -19,6 +19,7 @@ impl UIManager {
             layers: ElementMap::init_layers(),
             requires_update: true,
             ui_scale: window_hight as f32 / 1080f32,
+            // ui_scale: UI_SCALE,
         }
     }
     /// called once per frame
@@ -67,7 +68,9 @@ impl UIManager {
 
     /// called once per frame
     pub fn draw_ui(&self, ui_map: &UIMap, t_manager: &mut TextureManager) {
-        t_manager.canvas.set_draw_color(Color::RGB(14, 14, 14));
+        t_manager
+            .canvas
+            .set_draw_color(ui_map.colors.get(ColorTag::Deep));
         // canvas.set_draw_color(Color::RGB(14, 14, 14));
         t_manager.canvas.clear();
 

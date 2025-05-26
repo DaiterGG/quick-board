@@ -43,30 +43,31 @@ impl History {
 
         self.selected_h_step = Some(new_id);
 
-        if let Some(leaf_id) = current_layer.leaf_id {
-            // FIXME:
-            // trying to catch a bug
-            if self.steps.get(leaf_id).is_none() {
-                d!("leaf not found");
-                d!(self.steps.len());
-                d!(leaf_id);
-                dl!(self.selected_h_step);
-                panic!();
-            }
+        // if let Some(leaf_id) = current_layer.leaf_id {
+        //     // FIXME:
+        //     // trying to catch a bug
+        //     // "leaf not found" = "leaf not found", self.steps.len() = 0, leaf_id = 0, self.selected_h_step = Some(0), src\app\history.rs:53
+        //     if self.steps.get(leaf_id).is_none() {
+        //         d!("leaf not found");
+        //         d!(self.steps.len());
+        //         d!(leaf_id);
+        //         dl!(self.selected_h_step);
+        //         panic!();
+        //     }
 
-            //modify leaf to point to new leaf
-            self.steps[leaf_id].next_layer_step = Some(new_id);
-            //update layer
-            current_layer.leaf_id = Some(new_id);
-            //add new step, that points to the old leaf
-            self.steps.push(HistoryStep::new());
-        } else {
-            current_layer.root_id = Some(new_id);
-            current_layer.leaf_id = Some(new_id);
+        //     //modify leaf to point to new leaf
+        //     self.steps[leaf_id].next_layer_step = Some(new_id);
+        //     //update layer
+        //     current_layer.leaf_id = Some(new_id);
+        //     //add new step, that points to the old leaf
+        // } else {
+        //     current_layer.root_id = Some(new_id);
+        //     current_layer.leaf_id = Some(new_id);
 
-            //add root and set it to the current layer
-            self.steps.push(HistoryStep::new());
-        }
+        //     //add root and set it to the current layer
+        // }
+        self.set_leaf_to_current();
+        self.steps.push(HistoryStep::new());
         &mut self.steps[new_id]
     }
     pub fn add_layer(&mut self) -> usize {
@@ -89,6 +90,7 @@ impl History {
             } else {
                 self.selected_h_step = None;
             }
+            self.set_leaf_to_current();
         }
     }
     pub fn redo(&mut self) {
@@ -99,6 +101,36 @@ impl History {
         } else {
             self.selected_h_step = Some(0);
         }
+        self.set_leaf_to_current();
+    }
+    /// maintain current layer root and leaf
+    pub fn set_leaf_to_current(&mut self) {
+        if self.selected_h_step.is_none() {
+            return;
+        }
+        let layer_id = self.selected_layer.unwrap();
+
+        let layer = &mut self.layers[layer_id];
+        if let Some(h_step_id) = self.selected_h_step {
+            if let Some(leaf_id) = layer.leaf_id {
+                self.steps[leaf_id].next_layer_step = Some(h_step_id);
+                layer.leaf_id = Some(h_step_id);
+                self.steps[h_step_id].next_layer_step = None;
+            } else {
+                layer.root_id = Some(h_step_id);
+                layer.leaf_id = Some(h_step_id);
+            }
+            return;
+        }
+
+        if let Some(root_id) = layer.root_id {
+            self.steps[root_id].next_layer_step = None;
+        }
+        if let Some(leaf_id) = layer.leaf_id {
+            self.steps[leaf_id].next_layer_step = None;
+        }
+        layer.root_id = None;
+        layer.leaf_id = None;
     }
     pub fn full_draw(&self, t_manager: &mut TextureManager, data: &CanvasData, dst: XYWH) {
         if self.selected_h_step.is_none() {

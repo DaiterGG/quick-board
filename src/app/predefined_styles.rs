@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use crate::app::{
+    border::Border,
     style_align::{Size, TreatAs},
     texture_manager::LockedTexId,
 };
@@ -64,10 +65,11 @@ impl PredefinedStyles {
         use TreatAs::*;
         use Value as V;
 
-        let tool_button_d = D::idle(Data::bg(MainLight))
+        let thin_b = Border::single_w(BorderDark, 1);
+        let tool_button_d = D::idle(Data::bg(MainMiddle).border(thin_b))
             .hovered(Data::bg(Sub))
             .pressed(Data::bg(FlashClick));
-        let color_slider_handle_d = D::idle(Data::bg(MainLight));
+        let color_slider_handle_d = D::idle(Data::transparent().border(thin_b));
         let r = D::idle(Data::bg(Red));
         let g = D::idle(Data::bg(Green));
         let b = D::idle(Data::bg(Blue));
@@ -77,7 +79,7 @@ impl PredefinedStyles {
             RootMain: A [A::absolute(XY::new(0, 0), XY::new(0, 0), Size::new(PercentOfHor, 100, PercentOfVert, 100))],
 
             Header: A [A::block(Vertical, Start, V::new(Pixels, 50))],
-            Header: D [D::idle(Data::bg(MainMiddle))],
+            Header: D [D::idle(Data::bg(MainMiddle).border(Border::all_w(BorderDark, (0,0,1,0))))],
 
             RightWide: A [A::block(Horizontal, End, V::new(Pixels, 500))],
             RightWide: D [D::idle(Data::bg(MainMiddle))],
@@ -86,15 +88,15 @@ impl PredefinedStyles {
             PickerHSV: A [A::block(Vertical, Start, V::new(Pixels, 100))],
 
             HSV_H: A [A::block(Vertical, Start, V::new(Percent, 34))],
-            HSV_H: D [D::idle(Data::transparent().locked_texture(HueRange))],
+            HSV_H: D [D::idle(Data::transparent().locked_texture(RangeHue))],
             HSV_H: Slider [Slider::new(HSV_H_Handle as i32).within()],
 
             HSV_S: A [A::block(Vertical, Start, V::new(Percent, 50))],
-            HSV_S: D [D::idle(Data::transparent().locked_texture(SaturationRange))],
+            HSV_S: D [D::idle(Data::transparent().locked_texture(RangeSaturation))],
             HSV_S: Slider [Slider::new(HSV_S_Handle as i32).within()],
 
             HSV_V: A [A::block(Vertical, Start, V::new(Percent, 100))],
-            HSV_V: D [D::idle(Data::transparent().locked_texture(ValueRange))],
+            HSV_V: D [D::idle(Data::transparent().locked_texture(RangeValue))],
             HSV_V: Slider [Slider::new(HSV_V_Handle as i32).within()],
 
             HSV_H_Handle: A [A::absolute(XY::new(0,50), XY::new(0,50), Size::new(JustPixels, 30, PercentOfVert, 100))],
@@ -112,19 +114,22 @@ impl PredefinedStyles {
             ToolSizeDrag: A [A::block(Horizontal, Start, V::new(Percent, 50))],
             ToolSizeDrag: D [D::idle(Data::bg(MainDark)).hovered(Data::bg(Sub)).pressed(Data::bg(FlashClick))],
 
-
             RightTools: A [A::block(Horizontal, End, V::new(Pixels, 50))],
-            RightTools: D [D::idle(Data::bg(MainMiddle))],
+            RightTools: D [D::idle(Data::bg(MainMiddle).border(Border::all_w(BorderDark, (0,1,0,1))))],
 
-            IndButtons: A [A::block(Vertical, Start, V::new(Pixels, 3))],
+            IndButtons: A [A::block(Vertical, Start, V::new(Pixels, 5))],
 
-            BrushButton: A [A::absolute(XY::new(50, 0), XY::new(50, 0), Size::new_one(PercentOfHor, 90))],
+            BrushButton: A [A::absolute(XY::new(50, 0), XY::new(50, 0), Size::new_one(PercentOfHor, 85))],
             BrushButton: D [tool_button_d],
+            BrushButtonSub: A [A::absolute(XY::new(50, 50), XY::new(50, 50), Size::new_one(PercentOfHor, 90))],
+            BrushButtonSub: D [D::idle(Data::transparent().locked_texture(IconBrush))],
 
-            MoveButton: A [A::absolute(XY::new(50, 0), XY::new(50, 0), Size::new_one(PercentOfHor, 90))],
+            MoveButton: A [A::absolute(XY::new(50, 0), XY::new(50, 0), Size::new_one(PercentOfHor, 85))],
             MoveButton: D [tool_button_d],
+            MoveButtonSub: A [A::absolute(XY::new(50, 50), XY::new(50, 50), Size::new_one(PercentOfHor, 90))],
+            MoveButtonSub: D [D::idle(Data::transparent().locked_texture(IconMove))],
 
-            GapButton: A [A::block(Vertical, Start, V::new(Pixels, 47))],
+            GapButton: A [A::block(Vertical, Start, V::new(Pixels, 44))],
             // GapButtonBrush: A [A::block(Vertical, Start, V::new(Pixels, 47))],
 
             DrawWindow: D [D::idle(Data::transparent())],

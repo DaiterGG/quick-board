@@ -1,3 +1,4 @@
+// #![windows_subsystem = "windows"]
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 extern crate indices;
@@ -6,21 +7,20 @@ extern crate sdl2;
 mod app;
 mod debug;
 
-use std::{cell::RefCell, env, sync::OnceLock, time::*};
+use std::{env, path::Path, thread::sleep, time::*};
 
 use app::{
-    action_pump::{A_PUMP, ActionPump},
-    canvas_manager::CanvasManager,
-    coords::WH,
-    cursor::CursorManager,
-    event_manager::EventManager,
-    input_state::InputState,
-    predefined::Id,
-    texture_manager::*,
-    ui_manager::UIManager,
-    ui_map::UIMap,
+    action_pump::*, canvas_manager::CanvasManager, coords::WH, cursor::CursorManager,
+    event_manager::EventManager, input_state::InputState, predefined::Id, texture_manager::*,
+    ui_manager::UIManager, ui_map::UIMap,
 };
-use sdl2::{VideoSubsystem, image::*, mouse::MouseUtil, pixels::Color, rect::Rect, video::*};
+use sdl2::{
+    VideoSubsystem,
+    image::*,
+    pixels::{Color, PixelFormatEnum},
+    rect::Rect,
+    video::*,
+};
 
 pub fn main() -> Result<(), String> {
     unsafe {
@@ -64,6 +64,21 @@ pub fn main() -> Result<(), String> {
 
     // let mut fps = FPSManager::new();
     // println!("err {:?}", fps.set_framerate(200));
+
+    // let ttf_context = sdl2::ttf::init().map_err(|e| e.to_string())?;
+    // let mut font = ttf_context.load_font("../resources/fonts/inter.ttf", 128)?;
+    // font.set_style(sdl2::ttf::FontStyle::BOLD);
+    // let surface = font
+    //     .render("Hello Rust!")
+    //     .blended(Color::RGBA(255, 0, 0, 255))
+    //     .map_err(|e| e.to_string())?;
+    // let texture = texture_manager
+    //     .t_creator
+    //     .create_texture_from_surface(&surface)
+    //     .map_err(|e| e.to_string())?;
+    // texture_manager.canvas.copy(&texture, None, None)?;
+    // texture_manager.canvas.present();
+    // sleep(Duration::from_secs(1));
 
     let mut time = Instant::now();
     let mut last_frame = Instant::now();
@@ -122,7 +137,7 @@ pub fn main() -> Result<(), String> {
         // fps counter
         last_frame = Instant::now();
         if time.elapsed() >= Duration::from_secs(5) {
-            println!("fps: {}", frames / 5);
+            // println!("fps: {}", frames / 5);
             time = Instant::now();
             frames = 0;
         }
@@ -130,8 +145,7 @@ pub fn main() -> Result<(), String> {
     Ok(())
 }
 fn init_biggest_possible_display_res(video_subsystem: &VideoSubsystem) -> i32 {
-    // reasonable minimum values
-    let mut max_wh = 500;
+    let mut max_wh = -1;
     let count = video_subsystem.num_video_displays().unwrap_or(1);
     for i in 0..count {
         for mode in 0..video_subsystem.num_display_modes(i).unwrap_or(1) {
@@ -144,6 +158,9 @@ fn init_biggest_possible_display_res(video_subsystem: &VideoSubsystem) -> i32 {
                 }
             }
         }
+    }
+    if max_wh == -1 {
+        max_wh = 1920;
     }
     max_wh
 }

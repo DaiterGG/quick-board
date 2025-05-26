@@ -234,7 +234,7 @@ impl Brush {
             return;
         }
 
-        // hax
+        // FIXME:
         if diameter == 1 {
             dst.x -= 1;
         }
@@ -242,6 +242,7 @@ impl Brush {
         let src = XYWH::new(-min(buffer_at.x, 0), -min(buffer_at.y, 0), dst.w, dst.h);
 
         // let time = std::time::Instant::now();
+        // FIXME: duplicate strockes near the edge of draw texture
         if diameter == 3 {
             canvas
                 .with_texture_canvas(texture, |c| {

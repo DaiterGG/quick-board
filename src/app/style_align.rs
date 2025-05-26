@@ -223,7 +223,6 @@ fn split_window(
 
 #[cfg(test)]
 mod tests {
-
     use super::*;
     use proptest::prelude::*;
     proptest! {

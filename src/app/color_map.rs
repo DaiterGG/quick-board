@@ -11,9 +11,9 @@ pub enum ColorTag {
     Red,
     Blue,
     Green,
+    BorderDark,
     Total,
 }
-pub const COLOR_COUNT: usize = ColorTag::Total as usize;
 
 pub struct ColorMap {
     colors: [Color; ColorTag::Total as usize],
@@ -27,6 +27,7 @@ impl ColorMap {
         c[ColorTag::MainLight as usize] = Color::RGB(36, 36, 36);
         c[ColorTag::Sub as usize] = Color::RGB(0, 159, 177);
         c[ColorTag::FlashClick as usize] = Color::RGB(255, 255, 255);
+        c[ColorTag::BorderDark as usize] = Color::RGB(20, 20, 20);
         c[ColorTag::Red as usize] = Color::RGB(255, 0, 0);
         c[ColorTag::Blue as usize] = Color::RGB(0, 0, 255);
         c[ColorTag::Green as usize] = Color::RGB(0, 255, 0);

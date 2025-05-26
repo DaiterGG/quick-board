@@ -16,9 +16,10 @@ use super::{coords::*, texture_data::TextureData};
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum LockedTexId {
     IconBrush,
-    HueRange,
-    ValueRange,
-    SaturationRange,
+    IconMove,
+    RangeHue,
+    RangeValue,
+    RangeSaturation,
     Total,
 }
 pub const DRAW_TEX_SIZE: u32 = 512;
@@ -54,9 +55,18 @@ impl TextureManager {
 
         p[IconBrush as usize] = T::some(&t_creator, WH::new(32, 32));
 
-        p[HueRange as usize] = T::some(&t_creator, WH::new(256 * 3, 1));
-        p[SaturationRange as usize] = T::some(&t_creator, WH::new(256, 1));
-        p[ValueRange as usize] = T::some(&t_creator, WH::new(256, 1));
+        p[RangeHue as usize] = T::some(&t_creator, WH::new(256 * 3, 1));
+        p[RangeSaturation as usize] = T::some(&t_creator, WH::new(256, 1));
+        p[RangeValue as usize] = T::some(&t_creator, WH::new(256, 1));
+
+        p[IconBrush as usize] = T::from_bytes(
+            &t_creator,
+            include_bytes!("../../resources/icons/brush.png"),
+        );
+        p[IconMove as usize] = T::from_bytes(
+            &t_creator,
+            include_bytes!("../../resources/icons/move_tool.png"),
+        );
 
         Self {
             canvas,
@@ -166,7 +176,7 @@ impl TextureManager {
     }
     // static palettes
     pub fn init_palettes(&mut self) {
-        let hue = self.locked_textures[LockedTexId::HueRange as usize]
+        let hue = self.locked_textures[LockedTexId::RangeHue as usize]
             .as_mut()
             .unwrap();
         hue.texture
@@ -175,13 +185,13 @@ impl TextureManager {
     }
     // dynamic palettes
     pub fn update_palettes(&mut self, color: Color) {
-        let sat = self.locked_textures[LockedTexId::SaturationRange as usize]
+        let sat = self.locked_textures[LockedTexId::RangeSaturation as usize]
             .as_mut()
             .unwrap();
         sat.texture
             .update(None, &ColorOperations::saturation_palette(color), 256 * 4)
             .unwrap();
-        let val = self.locked_textures[LockedTexId::ValueRange as usize]
+        let val = self.locked_textures[LockedTexId::RangeValue as usize]
             .as_mut()
             .unwrap();
         val.texture

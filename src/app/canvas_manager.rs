@@ -54,7 +54,10 @@ impl CanvasManager {
                 // screen_pos: XY::new(100, 100),
                 // transform: XYWH::new(0, 0, 400, 300),
                 // screen_zoom: 1.0,
-                color: Observed::new(Color::RGB(255, 0, 0), Action::ColorChanged),
+                color: Observed::new(
+                    Color::RGB(214, 214, 214),
+                    Box::new(|c: Color| Action::ColorChanged(c)),
+                ),
                 screen_zoom: 1.0,
                 screen_pos: XY::new(BIG_CANVAS / -2, BIG_CANVAS / -2),
                 transform: XYWH::new(0, 0, BIG_CANVAS, BIG_CANVAS),
