@@ -133,8 +133,8 @@ impl PredefinedStyles {
             ToolSizeNumTxt: Txt [Txt::new("".to_string(), 30, vec![Idle])],
             ToolSizeNumTxt: Subscribe [Callback::ToolSizeTxt],
 
-            ToolSizeDrag: A [A::block(Horizontal, Start, V::new(Pixels, 30))],
-            ToolSizeDrag: D [D::idle(Data::new(MainDark)).hovered(Data::new(Sub)).pressed(Data::new(FlashClick))],
+            ToolSizeDrag: A [A::block(Horizontal, Start, V::new(Pixels, 40))],
+            ToolSizeDrag: D [D::idle(Data::new(MainDark).with_tex(IconDragHor)).hovered(Data::new(Sub)).pressed(Data::new(FlashClick))],
 
             BrushSizeTxt: A [A::absolute(XY::new(100, 40), XY::new(95, 50), Size::new(JustPixels, -1, PercentOfVert, 100))],
             BrushSizeTxt: D [D::idle(Data::transparent())],
@@ -152,8 +152,8 @@ impl PredefinedStyles {
             BrushHardnessNumTxt: Txt [Txt::new("".to_string(), 30, vec![Idle])],
             BrushHardnessNumTxt: Subscribe [Callback::BrushHardnessTxt],
 
-            BrushHardnessDrag: A [A::block(Horizontal, Start, V::new(Pixels, 30))],
-            BrushHardnessDrag: D [D::idle(Data::new(MainDark)).hovered(Data::new(Sub)).pressed(Data::new(FlashClick))],
+            BrushHardnessDrag: A [A::block(Horizontal, Start, V::new(Pixels, 40))],
+            BrushHardnessDrag: D [D::idle(Data::new(MainDark).with_tex(IconDragHor)).hovered(Data::new(Sub)).pressed(Data::new(FlashClick))],
             BrushHardnessTxt: A [A::absolute(XY::new(100, 40), XY::new(95, 50), Size::new(JustPixels, -1, PercentOfVert, 100))],
             BrushHardnessTxt: D [D::idle(Data::transparent())],
             BrushHardnessTxt: Txt [Txt::new("Brush Hardness".to_string(), 30, vec![Idle])],
@@ -170,8 +170,8 @@ impl PredefinedStyles {
             BrushDensityNumTxt: Txt [Txt::new("".to_string(), 30, vec![Idle])],
             BrushDensityNumTxt: Subscribe [Callback::BrushDensityTxt],
 
-            BrushDensityDrag: A [A::block(Horizontal, Start, V::new(Pixels, 30))],
-            BrushDensityDrag: D [D::idle(Data::new(MainDark)).hovered(Data::new(Sub)).pressed(Data::new(FlashClick))],
+            BrushDensityDrag: A [A::block(Horizontal, Start, V::new(Pixels, 40))],
+            BrushDensityDrag: D [D::idle(Data::new(MainDark).with_tex(IconDragHor)).hovered(Data::new(Sub)).pressed(Data::new(FlashClick))],
             BrushDensityTxt: A [A::absolute(XY::new(100, 40), XY::new(95, 50), Size::new(JustPixels, -1, PercentOfVert, 100))],
             BrushDensityTxt: D [D::idle(Data::transparent())],
             BrushDensityTxt: Txt [Txt::new("Brush Density".to_string(), 30, vec![Idle])],
@@ -188,8 +188,8 @@ impl PredefinedStyles {
             BrushAlfaNumTxt: Txt [Txt::new("".to_string(), 30, vec![Idle])],
             BrushAlfaNumTxt: Subscribe [Callback::BrushAlfaTxt],
 
-            BrushAlfaDrag: A [A::block(Horizontal, Start, V::new(Pixels, 30))],
-            BrushAlfaDrag: D [D::idle(Data::new(MainDark)).hovered(Data::new(Sub)).pressed(Data::new(FlashClick))],
+            BrushAlfaDrag: A [A::block(Horizontal, Start, V::new(Pixels, 40))],
+            BrushAlfaDrag: D [D::idle(Data::new(MainDark).with_tex(IconDragHor)).hovered(Data::new(Sub)).pressed(Data::new(FlashClick))],
             BrushAlfaTxt: A [A::absolute(XY::new(100, 40), XY::new(95, 50), Size::new(JustPixels, -1, PercentOfVert, 100))],
             BrushAlfaTxt: D [D::idle(Data::transparent())],
             BrushAlfaTxt: Txt [Txt::new("Brush Alfa".to_string(), 30, vec![Idle])],

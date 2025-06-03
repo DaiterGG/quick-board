@@ -21,6 +21,7 @@ use std::sync::{Mutex, OnceLock};
 pub enum Action {
     ButtonPressed(Id32),
     HoldTool(ToolId, bool),
+    ChangeTool(ToolId),
     Undo,
     Redo,
     Drag(Id32, XYF32),
@@ -150,6 +151,7 @@ impl ActionPump {
                     c_manager.tools.brush.update_buffer(t_manager);
                 }
                 HoldTool(id, hold_in) => c_manager.try_hold_tool(id, hold_in),
+                ChangeTool(tool_id) => c_manager.change_tool(tool_id),
                 Undo => c_manager.data.history.undo(t_manager),
                 Redo => c_manager.data.history.redo(),
                 BrushSize(increase) => {

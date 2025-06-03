@@ -130,6 +130,9 @@ impl EventManager {
                     Some(Keycode::Z) if input.shift() && !input.ctrl() => {
                         ActionPump::add(Redo);
                     }
+                    Some(Keycode::B) => {
+                        ActionPump::add(ChangeTool(ToolId::Brush));
+                    }
                     Some(Keycode::R) => {
                         ActionPump::add(HoldTool(ToolId::Sample, true));
                     }

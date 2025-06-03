@@ -28,6 +28,7 @@ pub enum TexId {
     IconBrush,
     IconMove,
     IconSample,
+    IconDragHor,
 
     RangeHue,
     RangeValue,
@@ -47,31 +48,29 @@ impl TextureVec {
         use TexId::*;
         use TextureData as T;
 
-        p[RangeHue as usize] = T::some(&t_creator, WH::new(256 * 3, 1));
-        p[RangeSaturation as usize] = T::some(&t_creator, WH::new(256, 1));
-        p[RangeValue as usize] = T::some(&t_creator, WH::new(256, 1));
+        p[RangeHue as usize] = T::some(t_creator, WH::new(256 * 3, 1));
+        p[RangeSaturation as usize] = T::some(t_creator, WH::new(256, 1));
+        p[RangeValue as usize] = T::some(t_creator, WH::new(256, 1));
 
-        p[IconBrush as usize] = T::from_bytes(
-            &t_creator,
-            include_bytes!("../../resources/icons/brush.png"),
-        );
+        p[IconBrush as usize] =
+            T::from_bytes(t_creator, include_bytes!("../../resources/icons/brush.png"));
         p[IconMove as usize] = T::from_bytes(
-            &t_creator,
+            t_creator,
             include_bytes!("../../resources/icons/move_tool.png"),
         );
         p[IconSample as usize] = T::from_bytes(
-            &t_creator,
+            t_creator,
             include_bytes!("../../resources/icons/sample.png"),
+        );
+        p[IconDragHor as usize] = T::from_bytes(
+            t_creator,
+            include_bytes!("../../resources/icons/drag_hor.png"),
         );
         let vec = Vec::from(p);
         Self {
             vec,
             unused_textures: Vec::new(),
         }
-    }
-    pub fn push(&mut self, display: TextureData) -> TexId16 {
-        self.vec.push(Some(display));
-        TexId16(self.vec.len() as u16 - 1)
     }
     pub fn get(&self, id: TexId16) -> &TextureData {
         self.vec[id.usize()]
