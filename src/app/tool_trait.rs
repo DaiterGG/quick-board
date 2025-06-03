@@ -2,16 +2,19 @@ use super::brush_tool::Brush;
 use super::canvas_manager::CanvasData;
 use super::fill_tool::Fill;
 use super::move_tool::Move;
+use super::sample_tool::Sample;
 use super::texture_manager::TextureManager;
 
 #[derive(Copy, Clone, Eq, PartialEq)]
 pub enum ToolId {
     Fill,
+    Sample,
     Brush,
     Move,
 }
 pub struct Tools {
     pub fill: Fill,
+    pub sample: Sample,
     pub brush: Brush,
     pub move_tool: Move,
 }
@@ -19,6 +22,7 @@ impl Tools {
     pub fn init_all_tools(t_manager: &mut TextureManager) -> Self {
         Self {
             fill: Fill::new(),
+            sample: Sample::new(),
             brush: Brush::new(t_manager),
             move_tool: Move::new(),
         }

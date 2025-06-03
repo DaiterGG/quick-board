@@ -117,7 +117,7 @@ impl HistoryStep {
         src: XYWH,
         dst: XYWH,
     ) {
-        let ui_tex = &mut t_manager.open_textures[data.targeted_ui_texture].texture;
+        let ui_tex = &mut t_manager.textures.get_mut(data.targeted_ui_texture).texture;
         let units = self.get_textures_for_copy(src);
 
         let zoom_64 = data.screen_zoom as f64;
@@ -141,19 +141,33 @@ impl HistoryStep {
             let overlap_w = f64::min(to_ui_coord_x + to_ui_coord_wh, dst_x + dst_w) - overlap_x;
             let overlap_h = f64::min(to_ui_coord_y + to_ui_coord_wh, dst_y + dst_h) - overlap_y;
 
-            let unit_src = Rect::new(
-                (f64::max(0.0, dst_x - to_ui_coord_x) / zoom_64) as i32,
-                (f64::max(0.0, dst_y - to_ui_coord_y) / zoom_64) as i32,
-                (overlap_w / zoom_64).round() as u32,
-                (overlap_h / zoom_64).round() as u32,
-            );
-
-            let unit_dst = FRect::new(
+            let w_f = overlap_w / zoom_64;
+            let h_f = overlap_h / zoom_64;
+            let x = (f64::max(0.0, dst_x - to_ui_coord_x) / zoom_64) as i32;
+            let y = (f64::max(0.0, dst_y - to_ui_coord_y) / zoom_64) as i32;
+            let w = w_f.ceil();
+            let h = h_f.ceil();
+            let unit_src = Rect::new(x, y, w as u32, h as u32);
+            let mut unit_dst = FRect::new(
                 overlap_x as f32,
                 overlap_y as f32,
                 overlap_w as f32,
                 overlap_h as f32,
             );
+
+            let dif_x = (w - w_f) * zoom_64;
+            unit_dst.w += dif_x as f32;
+            if unit_src.x != 0 {
+                unit_dst.x -= dif_x as f32;
+            }
+            // if dst_w > unit_dst.w {}
+
+            let dif_y = (h - h_f) * zoom_64;
+            unit_dst.h += dif_y as f32;
+            if unit_src.y != 0 {
+                unit_dst.y -= dif_y as f32;
+            }
+            // if dst_h > unit_dst.h {}
             let _ = t_manager.canvas.with_texture_canvas(ui_tex, |c| {
                 let _ = c.copy_f(tex, unit_src, unit_dst);
             });
@@ -167,7 +181,7 @@ impl HistoryStep {
         src: XYWH,
         dst: XYWH,
     ) {
-        let ui_tex = &mut t_manager.open_textures[data.targeted_ui_texture].texture;
+        let ui_tex = &mut t_manager.textures.get_mut(data.targeted_ui_texture).texture;
         let units = self.get_textures_for_copy(src);
 
         let to_ui_coord_wh = DRAW_TEX_SIZE as f32 * data.screen_zoom;
@@ -190,6 +204,7 @@ impl HistoryStep {
             let overlap_x = f32::max(to_ui_coord_x, dst_x);
             let overlap_y = f32::max(to_ui_coord_y, dst_y);
 
+            // NOTE: bc dst_x + dst_w is i32, movement is discrete when one tex is taking full screen
             let overlap_w = f32::min(to_ui_coord_x + to_ui_coord_wh, dst_x + dst_w) - overlap_x;
             let overlap_h = f32::min(to_ui_coord_y + to_ui_coord_wh, dst_y + dst_h) - overlap_y;
 
@@ -201,14 +216,42 @@ impl HistoryStep {
             let h = h_f.ceil();
             let unit_src = Rect::new(x, y, w as u32, h as u32);
 
-            let unit_dst = if data.screen_zoom > 1.0 {
-                let dif_x = (w - w_f) * data.screen_zoom;
-                let dif_y = (h - h_f) * data.screen_zoom;
-                FRect::new(overlap_x, overlap_y, overlap_w + dif_x, overlap_h + dif_y)
-            } else {
-                FRect::new(overlap_x, overlap_y, overlap_w, overlap_h)
-            };
+            let mut unit_dst = FRect::new(overlap_x, overlap_y, overlap_w, overlap_h);
+            let dif_x = (w - w_f) * data.screen_zoom;
+            unit_dst.w += dif_x;
+            if unit_src.x != 0 {
+                unit_dst.x -= dif_x;
+            }
+            // if dst_w > unit_dst.w {}
 
+            let dif_y = (h - h_f) * data.screen_zoom;
+            unit_dst.h += dif_y;
+            if unit_src.y != 0 {
+                unit_dst.y -= dif_y;
+            }
+            // if dst_h > unit_dst.h {}
+
+            // if unit_src.y > 50 {
+            //     print!("{} {}, ", to_ui_coord_y + to_ui_coord_wh, dst_y + dst_h);
+            //     print!(
+            //         "{} {} {} {}, ",
+            //         unit_src.x, unit_src.y, unit_src.w, unit_src.h
+            //     );
+            //     println!(
+            //         "{} {} {} {}",
+            //         unit_dst.x, unit_dst.y, unit_dst.w, unit_dst.h
+            //     );
+            // }
+            // if unit_src.x == 0 || unit_src.y == 0 {
+            //     print!(
+            //         "{} {} {} {}, ",
+            //         unit_src.x, unit_src.y, unit_src.w, unit_src.h
+            //     );
+            //     print!(
+            //         "{} {} {} {}, ",
+            //         unit_dst.x, unit_dst.y, unit_dst.w, unit_dst.h
+            //     );
+            // }
             t_manager
                 .canvas
                 .with_texture_canvas(ui_tex, |c| c.copy_f(tex, unit_src, unit_dst).unwrap())

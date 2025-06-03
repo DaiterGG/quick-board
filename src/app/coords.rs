@@ -36,6 +36,12 @@ impl XY {
     pub fn new(x: i32, y: i32) -> Self {
         XY { x, y }
     }
+    pub fn from_u32_tuple(xy: (u32, u32)) -> XY {
+        XY {
+            x: xy.0 as i32,
+            y: xy.1 as i32,
+        }
+    }
     pub fn transform_from(&self, zoom: f32, offset: XY) -> XY {
         XY {
             x: ((self.x - offset.x) as f32 / zoom) as i32,
@@ -86,6 +92,18 @@ impl XY {
         XY {
             x: self.x - other.x,
             y: self.y - other.y,
+        }
+    }
+    pub fn mult_one(&self, other: f32) -> XY {
+        XY {
+            x: (self.x as f32 * other).round() as i32,
+            y: (self.y as f32 * other).round() as i32,
+        }
+    }
+    pub fn divide_one(&self, other: f32) -> XY {
+        XY {
+            x: (self.x as f32 / other).round() as i32,
+            y: (self.y as f32 / other).round() as i32,
         }
     }
 

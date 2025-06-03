@@ -3,7 +3,20 @@ use markup::markup;
 use super::ui_element::{ElementType, UIElement};
 
 pub const ID_COUNT: usize = Id::Total as usize;
-pub type IdI32 = i32;
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
+pub struct Id32(pub u32);
+
+impl Id32 {
+    pub fn usize(self) -> usize {
+        self.0 as usize
+    }
+}
+impl From<Id> for Id32 {
+    fn from(id: Id) -> Self {
+        Id32(id as u32)
+    }
+}
 // new fancy proc_macro
 markup! {{
     RootMain:Div {
@@ -24,21 +37,55 @@ markup! {{
             },
             ToolSettings:Div {
                 BrushSettings:Div {
-                    ToolSize:Div {
-                        ToolSizeText:Div,
-                        ToolSizeDrag:Drag
-                    }
+                    BrushSize:Div {
+                        ToolSizeBlock:Div {
+                            ToolSizeNumBlock:Div {
+                                ToolSizeNumTxt:Txt,
+                            },
+                            ToolSizeDrag:Drag,
+                        },
+                        BrushSizeTxt:Txt,
+                    },
+                    BrushHardness:Div {
+                        BrushHardnessBlock:Div {
+                            BrushHardnessNumBlock:Div {
+                                BrushHardnessNumTxt:Txt,
+                            },
+                            BrushHardnessDrag:Drag,
+                        },
+                        BrushHardnessTxt:Txt,
+                    },
+                    BrushDensity:Div {
+                        BrushDensityBlock:Div {
+                            BrushDensityNumBlock:Div {
+                                BrushDensityNumTxt:Txt,
+                            },
+                            BrushDensityDrag:Drag,
+                        },
+                        BrushDensityTxt:Txt,
+                    },
+                    BrushAlfa:Div {
+                        BrushAlfaBlock:Div {
+                            BrushAlfaNumBlock:Div {
+                                BrushAlfaNumTxt:Txt,
+                            },
+                            BrushAlfaDrag:Drag,
+                        },
+                        BrushAlfaTxt:Txt,
+                    },
                 }
             }
         },
         RightTools:Div {
             IndButtons:Div,
             BrushButton:Button { BrushButtonSub:Div },
-            GapButton:Div,
+            GapButton1:Div,
             MoveButton:Button { MoveButtonSub:Div },
+            GapButton2:Div,
+            SampleButton:Button { SampleButtonSub:Div },
         },
         DrawWindow:DrawWindow
-    }
+    },
 }}
 // macro_rules! markup {
 //     (
@@ -52,17 +99,15 @@ markup! {{
 //             $($variant,)*
 //             Total,
 //         }
-
 //         pub struct Predefined;
-
 //         impl Predefined {
 //             pub fn init() -> Vec<UIElement> {
 //                 vec![
 //                     $(
 //                         UIElement::new(
-//                                 ElementType::$type,
-//                                 Id::$variant as i32,
-//                                 vec![ $( Id::$child as i32, )* ]
+//                             ElementType::$type,
+//                             Id::$variant as i32,
+//                             vec![ $( Id::$child as i32, )* ]
 //                         ),
 //                     )*
 //                 ]
@@ -70,13 +115,6 @@ markup! {{
 //         }
 //     };
 // }
-// pub const ID_COUNT: usize = Id::Total as usize;
-// pub type IdI32 = i32;
-// // impl Id {
-// //     pub const fn as_usize(id: Id) -> IdUsize {
-// //         id as IdUsize
-// //     }
-// // }
 // markup! {
 //     // main layout
 //     RootMain:Div[Header,RightWide,RightTools,DrawWindow],

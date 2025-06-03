@@ -1,4 +1,6 @@
-use app::{action_pump::*, texture_data::TextureData};
+use app::{
+    action_pump::*, input_state::ButtonState, texture_data::TextureData, texture_vec::TexId16,
+};
 use sdl2::{pixels::Color, render::TextureAccess};
 
 use crate::*;
@@ -24,40 +26,40 @@ pub struct CanvasManager {
 /// * `targeted_ui_texture`: id of the texture that is drawn to draw_window
 pub struct CanvasData {
     pub color: Observed<Color>,
+
+    pub last_hue: f32,
+    pub last_saturation: f32,
+
     pub transform: XYWH,
     pub screen_pos: XY,
     pub screen_zoom: f32,
-    pub targeted_ui_texture: usize,
-    pub targeted_ui_element: IdI32,
+    pub targeted_ui_texture: TexId16,
+    pub targeted_ui_element: Id32,
     pub history: History,
 }
 const BIG_CANVAS: i32 = 10_000;
+const DEFAULT_COLOR: Color = Color::RGB(214, 214, 214);
 impl CanvasManager {
-    pub fn new(t_manager: &mut TextureManager, ui_map: &mut UIMap, window_id: IdI32) -> Self {
-        let targeted_ui_texture = t_manager.init_open_texture(TextureData::new(
+    pub fn new(t_manager: &mut TextureManager, ui_map: &mut UIMap, window_id: Id32) -> Self {
+        let targeted_ui_texture = t_manager.textures.init_texture(TextureData::new(
             &t_manager.t_creator,
             WH::new_one(t_manager.biggest_possible_resolution),
             None,
             Some(TextureAccess::Target),
         ));
-        let draw_win_display = ui_map.displays[window_id as usize]
-            .as_mut()
-            .unwrap()
-            .states_data[DisplayState::Idle as usize]
+        let draw_win_display = ui_map.displays.get_mut_unwrap(window_id).states_data
+            [DisplayState::Idle as usize]
             .as_mut()
             .unwrap();
-        *draw_win_display = draw_win_display.open_texture(targeted_ui_texture);
-        t_manager.init_palettes();
+        draw_win_display.set_tex(targeted_ui_texture);
+        t_manager.textures.init_palettes();
 
+        ActionPump::add(Action::ColorFullUpdate(DEFAULT_COLOR));
         Self {
             data: CanvasData {
-                // screen_pos: XY::new(100, 100),
-                // transform: XYWH::new(0, 0, 400, 300),
-                // screen_zoom: 1.0,
-                color: Observed::new(
-                    Color::RGB(214, 214, 214),
-                    Box::new(|c: Color| Action::ColorChanged(c)),
-                ),
+                last_hue: 0.0,
+                last_saturation: 0.0,
+                color: Observed::new(DEFAULT_COLOR, Box::new(Action::ColorObserve)),
                 screen_zoom: 1.0,
                 screen_pos: XY::new(BIG_CANVAS / -2, BIG_CANVAS / -2),
                 transform: XYWH::new(0, 0, BIG_CANVAS, BIG_CANVAS),
@@ -76,9 +78,9 @@ impl CanvasManager {
         &mut self,
         input: &mut InputState,
         ui_map: &mut UIMap,
-        textures: &mut TextureManager,
+        t_manager: &mut TextureManager,
     ) {
-        let draw_win_transform = ui_map.elements[self.data.targeted_ui_element as usize].transform;
+        let draw_win_transform = ui_map.elements.get(self.data.targeted_ui_element).transform;
 
         let stroke_at = input
             .pos
@@ -89,10 +91,15 @@ impl CanvasManager {
             ToolId::Brush => {
                 self.tools
                     .brush
-                    .process_stroke(&mut self.data, input, stroke_at, textures);
+                    .process_stroke(&mut self.data, input, stroke_at, t_manager);
             }
             ToolId::Move => {
                 self.tools.move_tool.process_stroke(&mut self.data, input);
+            }
+            ToolId::Sample => {
+                self.tools
+                    .sample
+                    .process_stroke(&mut self.data, input, t_manager);
             }
             _ => {}
         }
@@ -104,22 +111,15 @@ impl CanvasManager {
 
             self.update_cursor = false;
         }
-
         //draw to buffer
-        let ui_tex = &mut textures.open_textures[self.data.targeted_ui_texture];
+        let ui_tex = &mut t_manager.textures.get_mut(self.data.targeted_ui_texture);
         let dst = self.calc_canvas_pos(draw_win_transform.wh());
 
         // this is just a buffer texture to be copied to draw_window directly
         ui_tex.src = Some(dst);
         ui_tex.dst = Some(dst);
 
-        let _ = textures
-            .canvas
-            .with_texture_canvas(&mut ui_tex.texture, |c| {
-                c.set_draw_color(Color::RGB(20, 20, 20));
-                let _ = c.fill_rect(dst.to_rect());
-            });
-        self.data.history.full_draw(textures, &self.data, dst);
+        self.data.history.full_draw(t_manager, &self.data, dst);
     }
 
     pub fn change_tool(&mut self, tool_id: ToolId) {

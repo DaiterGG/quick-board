@@ -1,8 +1,4 @@
-use std::cmp::*;
-
 use sdl2::rect::Rect;
-use sdl2::render::*;
-use sdl2::video::Window;
 
 use crate::dl;
 
@@ -10,10 +6,11 @@ use super::border::Border;
 use super::color_display::ColorDisplay;
 use super::color_map::*;
 use super::coords::*;
-use super::texture_data::TextureData;
 use super::texture_manager::*;
+use super::texture_vec::TexId;
+use super::texture_vec::TexId16;
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub enum DisplayState {
     Idle,
     // Active,
@@ -94,44 +91,38 @@ impl Display {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct DisplayData {
     draw_at_front: bool,
     color: Option<ColorDisplay>,
     sub_color: Option<ColorDisplay>,
-    texture_id: TexId,
+    pub tex_id: Option<TexId16>,
     edge_radius: u8,
     border: Option<Border>,
-}
-#[derive(PartialEq, Eq, Clone, Copy, Debug)]
-enum TexId {
-    Locked(LockedTexId),
-    Open(i32),
-    None,
 }
 impl DisplayData {
     pub fn transparent() -> Self {
         DisplayData {
             draw_at_front: false,
-            texture_id: TexId::None,
+            tex_id: None,
             color: None,
             sub_color: None,
             edge_radius: 0,
             border: None,
         }
     }
-    /// for draw behind childrens
-    pub fn bg(color: ColorTag) -> Self {
+    /// to draw behind childrens
+    pub fn new(color: ColorTag) -> Self {
         DisplayData {
             draw_at_front: false,
-            texture_id: TexId::None,
+            tex_id: None,
             color: Some(ColorDisplay::full(color)),
             sub_color: None,
             edge_radius: 0,
             border: None,
         }
     }
-    /// for draw on top of the childrens
+    /// to draw on top of the childrens
     pub fn at_front(mut self) -> Self {
         self.draw_at_front = true;
         self
@@ -144,13 +135,12 @@ impl DisplayData {
         self.border = Some(border);
         self
     }
-    pub fn locked_texture(mut self, id: LockedTexId) -> Self {
-        self.texture_id = TexId::Locked(id);
+    pub fn with_tex(mut self, id: TexId) -> Self {
+        self.tex_id = Some(id.into());
         self
     }
-    pub fn open_texture(mut self, id: usize) -> Self {
-        self.texture_id = TexId::Open(id as i32);
-        self
+    pub fn set_tex(&mut self, id: TexId16) {
+        self.tex_id = Some(id);
     }
     pub fn radius(mut self, radius: u8) -> Self {
         self.edge_radius = radius;
@@ -161,23 +151,9 @@ impl DisplayData {
             main.apply(&mut t_manager.canvas, colors, element_pos);
         }
 
-        match self.texture_id {
-            TexId::Locked(id) => {
-                Self::apply_texture(
-                    &mut t_manager.canvas,
-                    t_manager.locked_textures[id as usize].as_ref().unwrap(),
-                    element_pos,
-                );
-            }
-            TexId::Open(id) => {
-                Self::apply_texture(
-                    &mut t_manager.canvas,
-                    &t_manager.open_textures[id as usize],
-                    element_pos,
-                );
-            }
-            _ => {}
-        };
+        if let Some(id) = self.tex_id {
+            Self::apply_texture(t_manager, id, element_pos);
+        }
 
         if let Some(sub) = self.sub_color {
             sub.apply(&mut t_manager.canvas, colors, element_pos);
@@ -187,7 +163,8 @@ impl DisplayData {
             bord.apply(&mut t_manager.canvas, colors, element_pos);
         }
     }
-    fn apply_texture(canvas: &mut Canvas<Window>, data: &TextureData, element_pos: XYWH) {
+    fn apply_texture(t_manager: &mut TextureManager, id: TexId16, element_pos: XYWH) {
+        let data = t_manager.textures.get(id);
         let dst = if let Some(dst) = data.dst {
             Some(Rect::new(
                 element_pos.x + dst.x,
@@ -199,7 +176,7 @@ impl DisplayData {
             Some(element_pos.to_rect())
         };
         let src = data.src.map(|src| src.to_rect());
-        canvas.copy(&data.texture, src, dst).unwrap();
+        t_manager.canvas.copy(&data.texture, src, dst).unwrap();
     }
 }
 // impl Clone for DisplayData {

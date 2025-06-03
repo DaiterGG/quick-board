@@ -97,6 +97,9 @@ impl EventManager {
                     Some(Keycode::Space) => {
                         ActionPump::add(HoldTool(ToolId::Move, false));
                     }
+                    Some(Keycode::R) => {
+                        ActionPump::add(HoldTool(ToolId::Sample, false));
+                    }
                     Some(Keycode::LShift) => input.shift.0 = false,
                     Some(Keycode::RShift) => input.shift.1 = false,
                     Some(Keycode::LCtrl) => input.ctrl.0 = false,
@@ -126,6 +129,9 @@ impl EventManager {
                     }
                     Some(Keycode::Z) if input.shift() && !input.ctrl() => {
                         ActionPump::add(Redo);
+                    }
+                    Some(Keycode::R) => {
+                        ActionPump::add(HoldTool(ToolId::Sample, true));
                     }
                     _ => {}
                 },

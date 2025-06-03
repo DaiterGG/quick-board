@@ -1,4 +1,7 @@
-use crate::app::{drag::Drag, slider::Slider};
+use crate::{
+    app::{drag::Drag, slider::Slider},
+    dl,
+};
 
 use super::{
     action_pump::ActionPump, button::Button, coords::XYWH, draw_window::DrawWindow, input_state::*,
@@ -7,8 +10,8 @@ use super::{
 
 pub struct UIElement {
     pub element_type: ElementType,
-    pub id: IdI32,
-    pub childrens: Vec<IdI32>,
+    pub id: Id32,
+    pub childrens: Vec<Id32>,
     pub transform: XYWH,
 }
 #[derive(Copy, Clone)]
@@ -18,10 +21,11 @@ pub enum ElementType {
     DrawWindow,
     Drag,
     Slider,
+    Txt,
 }
 
 impl UIElement {
-    pub fn new(element: ElementType, id: IdI32, childrens: Vec<IdI32>) -> Self {
+    pub fn new(element: ElementType, id: Id32, childrens: Vec<Id32>) -> Self {
         Self {
             element_type: element,
             id,
@@ -31,18 +35,18 @@ impl UIElement {
     }
 
     pub fn pointer_collision_rec(
-        id: IdI32,
+        id: Id32,
         ui_map: &mut UIMap,
         input: &mut InputState,
         parrent_hit: bool,
     ) -> bool {
         // if parrent wasn't hit, then children are false
-        let hit = parrent_hit && input.pos.is_within(ui_map.elements[id as usize].transform);
+        let hit = parrent_hit && input.pos.is_within(ui_map.elements.get(id).transform);
         let mut was_hit_before = false;
 
         use ButtonState as B;
         use DisplayState as D;
-        if let Some(dis) = &mut ui_map.displays[id as usize] {
+        if let Some(dis) = ui_map.displays.get_mut(id) {
             was_hit_before = !hit && dis.active_states[D::Hovered as usize];
             dis.set_state(D::Hovered, hit);
             dis.set_state(D::Pressed, input.left() == B::Pressed && hit);
@@ -53,7 +57,7 @@ impl UIElement {
         }
         // element specific logic
         use ElementType as T;
-        match ui_map.elements[id as usize].element_type {
+        match ui_map.elements.get(id).element_type {
             T::Button if hit => {
                 Button::before_collision(id, input);
             }
@@ -69,13 +73,8 @@ impl UIElement {
             _ => {} //div
         }
 
-        for i in 0..ui_map.elements[id as usize].childrens.len() {
-            Self::pointer_collision_rec(
-                ui_map.elements[id as usize].childrens[i],
-                ui_map,
-                input,
-                hit,
-            );
+        for i in 0..ui_map.elements.get(id).childrens.len() {
+            Self::pointer_collision_rec(ui_map.elements.get(id).childrens[i], ui_map, input, hit);
         }
 
         // element specific logic
@@ -89,14 +88,20 @@ impl UIElement {
         hit
     }
     pub fn draw_to(&self, styles: &UIMap, textures: &mut TextureManager) {
-        let dis = &styles.displays[self.id as usize];
+        let dis = &styles.displays.get(self.id);
         let color = &styles.colors;
 
         dis.as_ref()
             .inspect(|d| d.draw(self.transform, false, color, textures));
+        // if self.id == 16 {
+        //     println!("{:?}", dis.as_ref().unwrap().states_data[0].unwrap());
+        // }
 
         for i in 0..self.childrens.len() {
-            styles.elements[self.childrens[i] as usize].draw_to(styles, textures);
+            styles
+                .elements
+                .get(self.childrens[i])
+                .draw_to(styles, textures);
         }
 
         dis.as_ref()

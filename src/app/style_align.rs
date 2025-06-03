@@ -4,12 +4,12 @@ use super::coords::*;
 
 #[derive(Copy, Clone, Debug)]
 pub struct Size {
-    hor: i16,
-    vert: i16,
-    hor_type: SizeTreatAs,
-    vert_type: SizeTreatAs,
+    pub hor: i16,
+    pub vert: i16,
+    pub hor_type: SizeTreatAs,
+    pub vert_type: SizeTreatAs,
 }
-#[derive(Copy, Clone, Debug)]
+#[derive(PartialEq, Eq, Copy, Clone, Debug)]
 pub enum SizeTreatAs {
     PercentOfHor,
     PercentOfVert,
@@ -51,8 +51,8 @@ impl Size {
 
 #[derive(Copy, Clone, Debug)]
 pub struct Value {
-    value: i16,
-    type_of: TreatAs,
+    pub value: i16,
+    pub type_of: TreatAs,
 }
 
 impl Value {
@@ -63,7 +63,7 @@ impl Value {
         unwrap(self.value, self.type_of, length, ui_scale)
     }
 }
-#[derive(Copy, Clone, Debug)]
+#[derive(PartialEq, Eq, Copy, Clone, Debug)]
 pub enum TreatAs {
     Percent,
     Pixels,
@@ -83,7 +83,7 @@ pub enum Side {
     End,
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(PartialEq, Eq, Copy, Clone, Debug)]
 pub enum Direction {
     Horizontal,
     Vertical,
@@ -165,6 +165,29 @@ impl Align {
                 let new_y = (window_to_fit.y + absolute_window_y) - absolute_pivot_y;
 
                 XYWH::new(new_x, new_y, absolute.w, absolute.h)
+            }
+        }
+    }
+    // for text element
+    pub fn set_size(&mut self, new_size: XY) {
+        match self {
+            Align::Absolute { size, .. } => {
+                if size.hor_type == SizeTreatAs::JustPixels {
+                    size.hor = new_size.x as i16;
+                }
+                if size.vert_type == SizeTreatAs::JustPixels {
+                    size.vert = new_size.y as i16;
+                }
+            }
+            Align::Block {
+                direction, length, ..
+            } => {
+                if *direction == Direction::Horizontal && length.type_of == TreatAs::Pixels {
+                    length.value = new_size.x as i16;
+                }
+                if *direction == Direction::Vertical && length.type_of == TreatAs::Pixels {
+                    length.value = new_size.y as i16;
+                }
             }
         }
     }

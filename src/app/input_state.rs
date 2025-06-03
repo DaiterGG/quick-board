@@ -9,7 +9,7 @@ pub struct InputState {
     pub pos: XY,
     pub delta: XY,
     pub states: [ButtonState; 6],
-    pub interacting_with: Option<IdI32>,
+    pub interacting_with: Option<Id32>,
     pub start_holding_at: Option<XY>,
     pub shift: (bool, bool),
     pub ctrl: (bool, bool),

@@ -24,23 +24,35 @@ impl Border {
     }
     pub fn apply(&self, canvas: &mut Canvas<Window>, colors: &ColorMap, pos: XYWH) {
         canvas.set_draw_color(colors.get(self.color));
-        canvas
-            .fill_rects(&[
-                Rect::new(pos.x, pos.y, pos.w as u32, self.width.0 as u32),
-                Rect::new(
+        if self.width.0 > 0 {
+            canvas
+                .fill_rect(Rect::new(pos.x, pos.y, pos.w as u32, self.width.0 as u32))
+                .unwrap();
+        }
+        if self.width.1 > 0 {
+            canvas
+                .fill_rect(Rect::new(
                     pos.x + pos.w - self.width.1 as i32,
                     pos.y,
                     self.width.1 as u32,
                     pos.h as u32,
-                ),
-                Rect::new(
+                ))
+                .unwrap();
+        }
+        if self.width.2 > 0 {
+            canvas
+                .fill_rect(Rect::new(
                     pos.x,
                     pos.y + pos.h - self.width.2 as i32,
                     pos.w as u32,
                     self.width.2 as u32,
-                ),
-                Rect::new(pos.x, pos.y, self.width.3 as u32, pos.h as u32),
-            ])
-            .unwrap();
+                ))
+                .unwrap();
+        }
+        if self.width.3 > 0 {
+            canvas
+                .fill_rect(Rect::new(pos.x, pos.y, self.width.3 as u32, pos.h as u32))
+                .unwrap();
+        }
     }
 }

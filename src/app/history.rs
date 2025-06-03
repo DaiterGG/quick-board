@@ -1,5 +1,7 @@
 use std::cmp::min;
 
+use sdl2::pixels::Color;
+
 use crate::{d, dl};
 
 use super::{
@@ -133,6 +135,15 @@ impl History {
         layer.leaf_id = None;
     }
     pub fn full_draw(&self, t_manager: &mut TextureManager, data: &CanvasData, dst: XYWH) {
+        let tex = &mut t_manager.textures.get_mut(data.targeted_ui_texture).texture;
+        t_manager
+            .canvas
+            .with_texture_canvas(tex, |c| {
+                c.set_draw_color(Color::RGBA(20, 20, 20, 255));
+                c.clear();
+            })
+            .unwrap();
+
         if self.selected_h_step.is_none() {
             return;
         }

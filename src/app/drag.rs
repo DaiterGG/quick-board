@@ -3,12 +3,8 @@ use crate::{TextureManager, app::action_pump::Action, dl};
 use super::{action_pump::ActionPump, input_state::*, predefined::*, ui_map::UIMap};
 
 pub struct Drag {}
-// impl Button {
-//     pub const fn new(id: Id, bg_color: Option<Color>) -> Div {
-//     }
-// }
 impl Drag {
-    pub fn before_collision(id: IdI32, input: &mut InputState, hit: bool) {
+    pub fn before_collision(id: Id32, input: &mut InputState, hit: bool) {
         if hit && input.left() == ButtonState::Pressed {
             input.interacting_with = Some(id);
 
@@ -18,7 +14,9 @@ impl Drag {
             let delta = input.delta.to_f32().mult_one(input.mult());
             ActionPump::add(Action::Drag(id, delta));
             input.mouse_wrap_on = true;
-        } else {
+        }
+        if input.left() == ButtonState::Released && input.interacting_with == Some(id) {
+            ActionPump::add(Action::DragEnd(id));
             input.mouse_wrap_on = false;
         }
     }

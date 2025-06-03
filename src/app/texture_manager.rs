@@ -1,46 +1,58 @@
-use std::{cmp::*, mem::swap, thread::sleep_ms};
-
-use app::color_operations::ColorOperations;
-use sdl2::{
-    VideoSubsystem,
-    pixels::{Color, PixelFormatEnum},
-    rect::Rect,
-    render::*,
-    video::*,
+use std::{
+    cmp::*,
+    mem::{self, replace, swap},
+    sync::OnceLock,
+    thread::sleep_ms,
+    time::Instant,
 };
 
 use crate::*;
 
+use super::color_operations::ColorOperations;
+use app::texture_vec::{TexId16, TextureVec};
+use sdl2::{
+    pixels::{Color, PixelFormatEnum},
+    render::*,
+    rwops::RWops,
+    sys::{SDL_ComposeCustomBlendMode, SDL_SetTextureBlendMode},
+    ttf::{Font, Sdl2TtfContext},
+    video::*,
+};
+
 use super::{coords::*, texture_data::TextureData};
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub enum LockedTexId {
-    IconBrush,
-    IconMove,
-    RangeHue,
-    RangeValue,
-    RangeSaturation,
-    Total,
-}
+pub static TTF_CONTEXT: OnceLock<Sdl2TtfContext> = OnceLock::new();
+
 pub const DRAW_TEX_SIZE: u32 = 512;
 pub const DRAW_TEX_SIZE_I32: i32 = DRAW_TEX_SIZE as i32;
-pub struct TextureManager {
+
+pub struct TextureManager<'a> {
     pub t_creator: TextureCreator<WindowContext>,
     pub biggest_possible_resolution: i32,
     pub canvas: Canvas<Window>,
-    // icons
-    pub locked_textures: [Option<TextureData>; LockedTexId::Total as usize],
-    // draw_canvas buffer, previews, displays
-    pub open_textures: Vec<TextureData>,
+
+    // pub ttf_context: Sdl2TtfContext,
+    // pub main_font_buffer: Fonts<'a>,
+    pub main_font_raw: &'a [u8],
+    pub main_font_buffer: Font<'a, 'a>,
+    pub main_font_buffer_size: u16,
+
+    pub textures: TextureVec,
+
     // DRAW_TEX_SIZExDRAW_TEX_SIZE textures, used for drawing or static for storage
+    // TODO: Move is separate struct
     pub draw_textures: Vec<Texture>,
     // buffers, to reduce texture creations
     pub used_target_textures: Vec<usize>,
     pub unused_target_textures: Vec<usize>,
     pub unused_static_textures: Vec<usize>,
 }
-impl TextureManager {
+impl TextureManager<'_> {
     pub fn new(window: Window, bpr: i32) -> Self {
+        TTF_CONTEXT
+            .set(sdl2::ttf::init().expect("Failed to init ttf"))
+            .unwrap_or_else(|_| panic!("Failed to set static ttf"));
+
         let canvas: Canvas<Window> = CanvasBuilder::new(window)
             .build()
             .expect("Failed to create canvas");
@@ -48,62 +60,32 @@ impl TextureManager {
         println!("Using SDL_Renderer \"{}\"", canvas.info().name);
         let t_creator: TextureCreator<WindowContext> = canvas.texture_creator();
 
-        let mut p = [const { None }; Total as usize];
-        use LockedTexId::*;
-        use PixelFormatEnum::*;
-        use TextureData as T;
+        let raw = include_bytes!("../../resources/fonts/Inter/Inter-VariableFont_opsz,wght.ttf");
+        let rwops = RWops::from_bytes(raw).expect("Failed to load font");
 
-        p[IconBrush as usize] = T::some(&t_creator, WH::new(32, 32));
+        let main_font_buffer_size = 12;
+        let main_font_buffer = TTF_CONTEXT
+            .get()
+            .unwrap()
+            .load_font_from_rwops(rwops, main_font_buffer_size)
+            .expect("Failed to load font");
 
-        p[RangeHue as usize] = T::some(&t_creator, WH::new(256 * 3, 1));
-        p[RangeSaturation as usize] = T::some(&t_creator, WH::new(256, 1));
-        p[RangeValue as usize] = T::some(&t_creator, WH::new(256, 1));
-
-        p[IconBrush as usize] = T::from_bytes(
-            &t_creator,
-            include_bytes!("../../resources/icons/brush.png"),
-        );
-        p[IconMove as usize] = T::from_bytes(
-            &t_creator,
-            include_bytes!("../../resources/icons/move_tool.png"),
-        );
-
+        let textures = TextureVec::new(&t_creator);
         Self {
             canvas,
             t_creator,
             biggest_possible_resolution: bpr,
-            locked_textures: p,
-            open_textures: Vec::new(),
+            main_font_raw: raw,
+            main_font_buffer,
+            main_font_buffer_size,
+            textures,
             draw_textures: Vec::new(),
             used_target_textures: Vec::new(),
             unused_target_textures: Vec::new(),
             unused_static_textures: Vec::new(),
         }
     }
-    pub fn locked_texture(&self, id: LockedTexId) -> &TextureData {
-        if let Some(t) = &self.locked_textures[id as usize] {
-            t
-        } else {
-            panic!("Texture {:?} not found", id)
-        }
-    }
-    pub fn open_texture(&self, id: usize) -> &TextureData {
-        &self.open_textures[id]
-    }
-    pub fn open_texture_mut(&mut self, id: usize) -> &mut TextureData {
-        &mut self.open_textures[id]
-    }
-    /// * `size`: None - use biggest possible resolution of the pc for safety
-    pub fn init_open_texture(&mut self, texture_data: TextureData) -> usize {
-        self.open_textures.push(texture_data);
-        self.open_textures.len() - 1
-    }
-    pub fn destroy_open_texture(&mut self, id: usize) {
-        unsafe {
-            let data = self.open_textures.remove(id);
-            data.texture.destroy();
-        }
-    }
+
     pub fn init_target_texture(&mut self) -> usize {
         let new = if !self.unused_target_textures.is_empty() {
             self.unused_target_textures.pop().unwrap()
@@ -154,48 +136,66 @@ impl TextureManager {
     }
     fn new_static_texture(&mut self) -> usize {
         let id = self.draw_textures.len();
-        let mut tex = self
+        let tex = self
             .t_creator
             .create_texture_static(PixelFormatEnum::RGBA8888, DRAW_TEX_SIZE, DRAW_TEX_SIZE)
             .expect("Failed to create static texture");
-        tex.set_blend_mode(BlendMode::Blend);
+        Self::set_draw_blend_mode(&tex);
 
         self.draw_textures.push(tex);
         id
     }
     fn new_target_texture(&mut self) -> usize {
         let id = self.draw_textures.len();
-        let mut tex = self
+        let tex = self
             .t_creator
             .create_texture_target(PixelFormatEnum::RGBA8888, DRAW_TEX_SIZE, DRAW_TEX_SIZE)
             .expect("Failed to create target texture");
-        tex.set_blend_mode(BlendMode::Blend);
+        Self::set_draw_blend_mode(&tex);
 
         self.draw_textures.push(tex);
         id
     }
-    // static palettes
-    pub fn init_palettes(&mut self) {
-        let hue = self.locked_textures[LockedTexId::RangeHue as usize]
-            .as_mut()
-            .unwrap();
-        hue.texture
-            .update(None, &ColorOperations::hue_palette(), 256 * 4 * 3)
-            .unwrap();
+    fn set_draw_blend_mode(tex: &Texture) {
+        unsafe {
+            let custom = SDL_ComposeCustomBlendMode(
+                sdl2::sys::SDL_BlendFactor::SDL_BLENDFACTOR_ONE,
+                // sdl2::sys::SDL_BlendFactor::SDL_BLENDFACTOR_ONE,
+                sdl2::sys::SDL_BlendFactor::SDL_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
+                sdl2::sys::SDL_BlendOperation::SDL_BLENDOPERATION_ADD,
+                sdl2::sys::SDL_BlendFactor::SDL_BLENDFACTOR_ONE,
+                sdl2::sys::SDL_BlendFactor::SDL_BLENDFACTOR_ONE,
+                sdl2::sys::SDL_BlendOperation::SDL_BLENDOPERATION_MAXIMUM,
+            );
+            SDL_SetTextureBlendMode(tex.raw(), custom);
+        }
     }
-    // dynamic palettes
-    pub fn update_palettes(&mut self, color: Color) {
-        let sat = self.locked_textures[LockedTexId::RangeSaturation as usize]
-            .as_mut()
-            .unwrap();
-        sat.texture
-            .update(None, &ColorOperations::saturation_palette(color), 256 * 4)
-            .unwrap();
-        let val = self.locked_textures[LockedTexId::RangeValue as usize]
-            .as_mut()
-            .unwrap();
-        val.texture
-            .update(None, &ColorOperations::value_palette(color), 256 * 4)
-            .unwrap();
+    fn try_update_font_size(&mut self, size: u16) {
+        if self.main_font_buffer_size != size {
+            self.main_font_buffer = TTF_CONTEXT
+                .get()
+                .unwrap()
+                .load_font_from_rwops(
+                    RWops::from_bytes(self.main_font_raw).expect("Failed to load font"),
+                    size,
+                )
+                .unwrap();
+            self.main_font_buffer_size = size;
+        }
+    }
+    pub fn new_text_texture(
+        &mut self,
+        text: &str,
+        size: u16,
+        color: Color,
+    ) -> (TexId16, (u32, u32)) {
+        self.try_update_font_size(size);
+        let text_size = self.main_font_buffer.size_of(text).unwrap();
+        let tex_d = if text_size.0 == 0 || text_size.1 == 0 {
+            TextureData::with_text(&self.main_font_buffer, &self.t_creator, " ", color)
+        } else {
+            TextureData::with_text(&self.main_font_buffer, &self.t_creator, text, color)
+        };
+        (self.textures.init_texture(tex_d), text_size)
     }
 }

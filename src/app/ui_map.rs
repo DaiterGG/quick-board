@@ -1,31 +1,32 @@
+use std::any::Any;
 use std::collections::HashMap;
 
-use super::predefined::IdI32;
-use super::slider::Slider;
-use super::{element_map::ElementMap, predefined_styles::PredefinedStyles};
+use super::align_vec::AlignVec;
+use super::display_vec::DisplayVec;
+use super::element_vec::ElementVec;
+use super::predefined::Id32;
+use super::predefined_styles::PredefinedStyles;
 
-use super::{color_map::*, style_align::*, style_display::*, ui_element::UIElement};
+use super::color_map::*;
 
+pub type ElemDataMap = HashMap<Id32, Box<dyn Any>>;
 pub struct UIMap {
-    pub elements: Vec<UIElement>,
+    pub elements: ElementVec,
 
-    // used separately, but defined here, for convienience
-    // styles: Vec<(Align, Option<Display>)>,
-    pub aligns: Vec<Align>,
-    pub displays: Vec<Option<Display>>,
-    pub sliders_data: HashMap<IdI32, Slider>,
-
+    pub aligns: AlignVec,
+    pub displays: DisplayVec,
+    pub elements_data: ElemDataMap,
     pub colors: ColorMap,
 }
 
 impl UIMap {
     pub fn new() -> Self {
-        let (aligns, displays, sliders_data) = PredefinedStyles::init();
+        let (aligns, displays, elements_data) = PredefinedStyles::init();
         Self {
-            elements: ElementMap::init(),
+            elements: ElementVec::init(),
             aligns,
             displays,
-            sliders_data,
+            elements_data,
             colors: ColorMap::new(),
         }
     }

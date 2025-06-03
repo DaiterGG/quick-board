@@ -6,7 +6,7 @@ use super::{
     coords::XYWH,
 };
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct ColorDisplay {
     color: ColorTag,
     alfa: u8,
