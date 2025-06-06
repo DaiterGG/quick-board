@@ -8,7 +8,10 @@ use sdl2::{
     pixels::{Color, PixelFormatEnum},
     render::*,
     rwops::RWops,
-    sys::{SDL_ComposeCustomBlendMode, SDL_SetTextureBlendMode},
+    sys::{
+        SDL_BlendFactor, SDL_BlendMode, SDL_BlendOperation, SDL_ComposeCustomBlendMode,
+        SDL_SetTextureBlendMode,
+    },
     ttf::{Font, Sdl2TtfContext},
     video::*,
 };
@@ -154,31 +157,26 @@ impl TextureManager<'_> {
     fn set_draw_blend_mode(&mut self, tex_id: usize, is_eraser: bool) {
         let tex = &self.draw_textures[tex_id];
         if is_eraser {
-            unsafe {
-                let custom = SDL_ComposeCustomBlendMode(
-                    sdl2::sys::SDL_BlendFactor::SDL_BLENDFACTOR_ZERO,
-                    sdl2::sys::SDL_BlendFactor::SDL_BLENDFACTOR_ONE,
-                    sdl2::sys::SDL_BlendOperation::SDL_BLENDOPERATION_ADD,
-                    sdl2::sys::SDL_BlendFactor::SDL_BLENDFACTOR_ONE,
-                    sdl2::sys::SDL_BlendFactor::SDL_BLENDFACTOR_ONE,
-                    sdl2::sys::SDL_BlendOperation::SDL_BLENDOPERATION_REV_SUBTRACT,
-                );
-                SDL_SetTextureBlendMode(tex.raw(), custom);
-            }
+            set_custom_blend_mode(
+                tex,
+                SDL_BlendFactor::SDL_BLENDFACTOR_ZERO,
+                SDL_BlendFactor::SDL_BLENDFACTOR_ONE,
+                SDL_BlendOperation::SDL_BLENDOPERATION_ADD,
+                SDL_BlendFactor::SDL_BLENDFACTOR_ONE,
+                SDL_BlendFactor::SDL_BLENDFACTOR_ONE,
+                SDL_BlendOperation::SDL_BLENDOPERATION_REV_SUBTRACT,
+            );
             return;
         }
-        unsafe {
-            let custom = SDL_ComposeCustomBlendMode(
-                //color similar to BlendMode::Blend, but do not change src color
-                sdl2::sys::SDL_BlendFactor::SDL_BLENDFACTOR_ONE,
-                sdl2::sys::SDL_BlendFactor::SDL_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
-                sdl2::sys::SDL_BlendOperation::SDL_BLENDOPERATION_ADD,
-                sdl2::sys::SDL_BlendFactor::SDL_BLENDFACTOR_ONE,
-                sdl2::sys::SDL_BlendFactor::SDL_BLENDFACTOR_ONE,
-                sdl2::sys::SDL_BlendOperation::SDL_BLENDOPERATION_MAXIMUM,
-            );
-            SDL_SetTextureBlendMode(tex.raw(), custom);
-        }
+        set_custom_blend_mode(
+            tex,
+            SDL_BlendFactor::SDL_BLENDFACTOR_ONE,
+            SDL_BlendFactor::SDL_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
+            SDL_BlendOperation::SDL_BLENDOPERATION_ADD,
+            SDL_BlendFactor::SDL_BLENDFACTOR_ONE,
+            SDL_BlendFactor::SDL_BLENDFACTOR_ONE,
+            SDL_BlendOperation::SDL_BLENDOPERATION_MAXIMUM,
+        );
     }
     fn try_update_font_size(&mut self, size: u16) {
         if self.main_font_buffer_size != size {
@@ -207,5 +205,23 @@ impl TextureManager<'_> {
             TextureData::with_text(&self.main_font_buffer, &self.t_creator, text, color)
         };
         (self.textures.init_texture(tex_d), text_size)
+    }
+}
+pub fn set_custom_blend_mode(
+    alfa_data: &Texture,
+    c_src: SDL_BlendFactor,
+    c_dst: SDL_BlendFactor,
+    c_op: SDL_BlendOperation,
+    a_src: SDL_BlendFactor,
+    a_dst: SDL_BlendFactor,
+    a_op: SDL_BlendOperation,
+) {
+    let custom = unsafe { SDL_ComposeCustomBlendMode(c_src, c_dst, c_op, a_src, a_dst, a_op) };
+    if custom == SDL_BlendMode::SDL_BLENDMODE_INVALID {
+        panic!("Error creating blend mode: {}", sdl2::get_error())
+    }
+    let ret = unsafe { SDL_SetTextureBlendMode(alfa_data.raw(), custom) };
+    if ret != 0 {
+        panic!("Error setting blend mode: {}", sdl2::get_error())
     }
 }

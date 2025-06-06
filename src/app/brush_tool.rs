@@ -13,7 +13,9 @@ use sdl2::{
     rect::*,
     render::*,
     surface::Surface,
-    sys::{SDL_BlendMode, SDL_ComposeCustomBlendMode, SDL_SetTextureBlendMode},
+    sys::{
+        SDL_BlendFactor, SDL_BlendOperation, SDL_ComposeCustomBlendMode, SDL_SetTextureBlendMode,
+    },
 };
 
 const BUFFER_TEX_SIZE: i32 = 5000;
@@ -62,7 +64,15 @@ impl Brush {
             None,
             Some(TextureAccess::Target),
         );
-        set_alfa_custom_blend_mode(&alfa_data);
+        set_custom_blend_mode(
+            &alfa_data.texture,
+            SDL_BlendFactor::SDL_BLENDFACTOR_ONE,
+            SDL_BlendFactor::SDL_BLENDFACTOR_ONE,
+            SDL_BlendOperation::SDL_BLENDOPERATION_ADD,
+            SDL_BlendFactor::SDL_BLENDFACTOR_DST_ALPHA,
+            SDL_BlendFactor::SDL_BLENDFACTOR_ZERO,
+            SDL_BlendOperation::SDL_BLENDOPERATION_ADD,
+        );
         let alfa_mask_id = texs.init_texture(alfa_data);
 
         let mut tex = TextureData::new(
@@ -419,23 +429,4 @@ impl Brush {
     //     t_manager.canvas.present();
     //     sleep(std::time::Duration::from_millis(1000));
     // }
-}
-fn set_alfa_custom_blend_mode(alfa_data: &TextureData) {
-    let custom = unsafe {
-        SDL_ComposeCustomBlendMode(
-            sdl2::sys::SDL_BlendFactor::SDL_BLENDFACTOR_ONE,
-            sdl2::sys::SDL_BlendFactor::SDL_BLENDFACTOR_ONE,
-            sdl2::sys::SDL_BlendOperation::SDL_BLENDOPERATION_ADD,
-            sdl2::sys::SDL_BlendFactor::SDL_BLENDFACTOR_DST_ALPHA,
-            sdl2::sys::SDL_BlendFactor::SDL_BLENDFACTOR_ZERO,
-            sdl2::sys::SDL_BlendOperation::SDL_BLENDOPERATION_ADD,
-        )
-    };
-    if custom == SDL_BlendMode::SDL_BLENDMODE_INVALID {
-        panic!("Error creating blend mode: {}", sdl2::get_error())
-    }
-    let ret = unsafe { SDL_SetTextureBlendMode(alfa_data.texture.raw(), custom) };
-    if ret != 0 {
-        panic!("Error setting blend mode: {}", sdl2::get_error())
-    }
 }
