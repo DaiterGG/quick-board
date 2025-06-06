@@ -1,12 +1,12 @@
-use std::{cmp::*, thread::sleep};
+use std::cmp::*;
 
-use crate::*;
-
-use super::{
-    canvas_manager::*, coords::*, input_state::*, texture_data::TextureData, texture_manager::*,
+use crate::{
+    Action,
+    app::{
+        canvas_manager::*, coords::*, input_state::*, observed::Observed,
+        texture_data::TextureData, texture_manager::*, texture_vec::TexId16,
+    },
 };
-use app::texture_vec::TexId16;
-use indices::indices;
 use sdl2::{
     gfx::primitives::DrawRenderer,
     pixels::*,
@@ -23,18 +23,19 @@ const ALFA_CIRCLE_TEX_SIZE: i32 = 1000;
 /// * private set
 /// * pub get sub_brush_diameter as i32
 /// *
-/// * `alfa`: 1-100
-/// * `draw_gap_percent`: 1-100
-/// * `alfa_hardness`: 1-100
+/// * `alfa`: 1-100%
+/// * `draw_density`: 1-800, % of brush size
+/// * `alfa_hardness`: 1-100%
 pub struct Brush {
     sub_brush_diameter: Observed<f32>,
     pub alfa: Observed<i32>,
-    pub draw_gap_percent: Observed<i32>,
+    pub draw_density: Observed<i32>,
 
     last_stroke_at: XY,
-    mask_id: TexId16,
+    pub erase_mode: bool,
 
     // for circle mask
+    mask_id: TexId16,
     pub alfa_hardness: Observed<i32>,
     alfa_mask_id: TexId16,
 
@@ -43,9 +44,6 @@ pub struct Brush {
     buffer_id: TexId16,
 }
 impl Brush {
-    // pub fn enable(&self, data: &mut CanvasData) {
-    //     data.update_cursor = true;
-    // }
     pub fn new(t_manager: &mut TextureManager) -> Self {
         let texs = &mut t_manager.textures;
         let mask_id = texs.init_texture(TextureData::new(
@@ -77,25 +75,25 @@ impl Brush {
         }
         let alfa_mask_id = texs.init_texture(alfa_data);
 
-        let buffer_id = texs.init_texture(TextureData::new(
+        let mut tex = TextureData::new(
             &t_manager.t_creator,
             WH::new(BUFFER_TEX_SIZE, BUFFER_TEX_SIZE),
             None,
             Some(TextureAccess::Target),
-        ));
-        texs.get_mut(buffer_id)
-            .texture
-            .set_blend_mode(BlendMode::Blend);
+        );
+        tex.texture.set_blend_mode(BlendMode::Blend);
+        let buffer_id = texs.init_texture(tex);
 
         let mut s = Self {
             buffer_id,
+            erase_mode: false,
             alfa_mask_id,
             sub_brush_diameter: Observed::new(50.0, Box::new(Action::ToolSizeObserve)),
-            draw_gap_percent: Observed::new(10, Box::new(Action::BrushDensityObserve)),
-            alfa_hardness: Observed::new(1, Box::new(Action::BrushHardnessObserve)),
+            draw_density: Observed::new(5, Box::new(Action::BrushDensityObserve)),
+            alfa_hardness: Observed::new(100, Box::new(Action::BrushHardnessObserve)),
             last_stroke_at: XY::new(0, 0),
             mask_id,
-            alfa: Observed::new(100, Box::new(Action::BrushAlfaObserve)),
+            alfa: Observed::new(1, Box::new(Action::BrushAlfaObserve)),
         };
         s.generate_circle_mask(t_manager);
         s.generate_circle_alfa_mask(t_manager);
@@ -272,7 +270,7 @@ impl Brush {
         let radius = self.brush_diameter() / 2;
 
         if input.left() == Pressed {
-            let step = data.history.add_step();
+            let step = data.history.add_step(self.erase_mode);
             self.last_stroke_at = stroke_at;
             let bound = stroke_at.to_bound().expand_one(radius);
             let texture_unit_vec = step.get_textures(bound, data.transform, t_manager);
@@ -293,9 +291,13 @@ impl Brush {
             return;
         };
 
+        if input.delta.x == 0 && input.delta.y == 0 {
+            return;
+        }
+
         let traveled = stroke_at.distance(self.last_stroke_at);
 
-        let gap_f = max((radius * self.draw_gap_percent.get()) / 100, 1) as f32;
+        let gap_f = f32::max((radius * self.draw_density.get()) as f32 / 100.0, 1.0);
         let strokes_count_f = traveled / gap_f;
         let strokes_count = strokes_count_f.floor() as i32;
         if strokes_count == 0 {
@@ -353,7 +355,6 @@ impl Brush {
         let texture = &mut t_manager.draw_textures[unit_id];
         let buffer = &mut t_manager.textures.get_mut(self.buffer_id).texture;
 
-        buffer.set_color_mod(color.r, color.g, color.b);
         let diameter = self.brush_diameter();
         let mut dst = buffer_at
             .to_tr_one(diameter)
@@ -362,7 +363,7 @@ impl Brush {
             return;
         }
 
-        // FIXME:
+        // FIXME: pointer is not precise at that scale
         if diameter == 1 {
             dst.x -= 1;
         }
@@ -370,11 +371,16 @@ impl Brush {
         let src = XYWH::new(-min(buffer_at.x, 0), -min(buffer_at.y, 0), dst.w, dst.h);
 
         buffer.set_alpha_mod((255 * self.alfa.get() / 100) as u8);
+        if self.erase_mode {
+            buffer.set_color_mod(255, 255, 255);
+        } else {
+            buffer.set_color_mod(color.r, color.g, color.b);
+        }
         // let time = std::time::Instant::now();
         t_manager
             .canvas
             .with_texture_canvas(texture, |c| {
-                c.copy(&buffer, Some(src.to_rect()), Some(dst.to_rect()))
+                c.copy(buffer, Some(src.to_rect()), Some(dst.to_rect()))
                     .unwrap();
             })
             .unwrap();

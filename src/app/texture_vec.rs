@@ -82,6 +82,14 @@ impl TextureVec {
             .as_mut()
             .unwrap_or_else(|| panic!("texture data '{:?}' does not exist", id))
     }
+    pub fn get_mut_2(
+        &mut self,
+        one_id: TexId16,
+        two_id: TexId16,
+    ) -> (&mut TextureData, &mut TextureData) {
+        let (one, two) = indices!(&mut self.vec, one_id.usize(), two_id.usize());
+        (one.as_mut().unwrap(), two.as_mut().unwrap())
+    }
     pub fn get_mut_3(
         &mut self,
         one_id: TexId16,

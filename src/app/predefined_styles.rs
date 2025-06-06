@@ -78,7 +78,8 @@ impl PredefinedStyles {
         let tool_button_d = D::idle(Data::new(MainMiddle).border(thin_b))
             .hovered(Data::new(Sub))
             .pressed(Data::new(FlashClick));
-        let color_slider_handle_d = D::idle(Data::transparent().border(thin_b));
+        let color_slider_handle_d =
+            D::idle(Data::new(CurrentColor).border(Border::single_w(CurrentColorReverse, 1)));
         let r = D::idle(Data::new(Red));
         let g = D::idle(Data::new(Green));
         let b = D::idle(Data::new(Blue));
@@ -194,6 +195,17 @@ impl PredefinedStyles {
             BrushAlfaTxt: D [D::idle(Data::transparent())],
             BrushAlfaTxt: Txt [Txt::new("Brush Alfa".to_string(), 30, vec![Idle])],
 
+
+            BrushErase: A [A::block(Vertical, Start, V::new(Pixels, 44))],
+            BrushEraseBlock: A [A::block(Horizontal, End, V::new(Percent, 50))],
+
+            BrushEraseCheck: A [A::absolute(XY::new(0, 50), XY::new(0, 50), Size::new(PercentOfVert, 100, PercentOfVert, 100))],
+            BrushEraseCheck: D [D::idle(Data::new(MainDark).border(thin_b)).hovered(Data::new(Sub)).pressed(Data::new(FlashClick))],
+            BrushEraseTxt: A [A::absolute(XY::new(100, 40), XY::new(95, 50), Size::new(JustPixels, -1, PercentOfVert, 100))],
+            BrushEraseTxt: D [D::idle(Data::transparent())],
+            BrushEraseTxt: Txt [Txt::new("Brush Erase".to_string(), 30, vec![Idle])],
+
+
             RightTools: A [A::block(Horizontal, End, V::new(Pixels, 50))],
             RightTools: D [D::idle(Data::new(MainMiddle).border(Border::all_w(BorderDark, (0,1,0,1))))],
 
@@ -218,7 +230,9 @@ impl PredefinedStyles {
             SampleButtonSub: D [D::idle(Data::transparent().with_tex(IconSample))],
             // GapButtonBrush: A [A::block(Vertical, Start, V::new(Pixels, 47))],
 
-            DrawWindow: D [D::idle(Data::transparent())],
+            DrawWindow: D [D::idle(Data::new(Deep))],
+
+            ForTestSub1: A [A::block(Horizontal, Start, V::new(Percent, 40))],
         }
     }
 }

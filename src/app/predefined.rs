@@ -73,6 +73,12 @@ markup! {{
                         },
                         BrushAlfaTxt:Txt,
                     },
+                    BrushErase:Div {
+                        BrushEraseBlock:Div {
+                            BrushEraseCheck:Button,
+                        },
+                        BrushEraseTxt:Txt,
+                    },
                 }
             }
         },
@@ -86,7 +92,13 @@ markup! {{
         },
         DrawWindow:DrawWindow
     },
+
+    ForTest1:Div {
+        ForTestSub1:Div,
+        ForTestSub2:Div,
+    },
 }}
+// NOTE: old macro for reference
 // macro_rules! markup {
 //     (
 //         $(

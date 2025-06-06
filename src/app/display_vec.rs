@@ -31,7 +31,7 @@ impl DisplayVec {
             .as_mut()
             .unwrap_or_else(|| panic!("display '{:?}' does not exist", id))
     }
-    pub fn get_from_id(&self, id: Id) -> Option<Display> {
-        self.vec[id as usize].clone()
+    pub fn get_from_id(&self, id: Id) -> Option<&Display> {
+        self.vec[id as usize].as_ref()
     }
 }

@@ -1,15 +1,9 @@
-use std::{
-    cmp::*,
-    mem::{self, replace, swap},
-    sync::OnceLock,
-    thread::sleep_ms,
-    time::Instant,
+use std::sync::OnceLock;
+
+use crate::app::{
+    texture_data::TextureData,
+    texture_vec::{TexId16, TextureVec},
 };
-
-use crate::*;
-
-use super::color_operations::ColorOperations;
-use app::texture_vec::{TexId16, TextureVec};
 use sdl2::{
     pixels::{Color, PixelFormatEnum},
     render::*,
@@ -18,8 +12,6 @@ use sdl2::{
     ttf::{Font, Sdl2TtfContext},
     video::*,
 };
-
-use super::{coords::*, texture_data::TextureData};
 
 pub static TTF_CONTEXT: OnceLock<Sdl2TtfContext> = OnceLock::new();
 
@@ -86,23 +78,28 @@ impl TextureManager<'_> {
         }
     }
 
-    pub fn init_target_texture(&mut self) -> usize {
+    pub fn init_target_texture(&mut self, is_eraser: bool) -> usize {
         let new = if !self.unused_target_textures.is_empty() {
             self.unused_target_textures.pop().unwrap()
         } else {
             self.new_target_texture()
         };
+        self.set_draw_blend_mode(new, is_eraser);
         self.used_target_textures.push(new);
         new
     }
-    fn init_static_texture(&mut self) -> usize {
+    fn init_static_texture(&mut self, is_eraser: bool) -> usize {
         if !self.unused_static_textures.is_empty() {
-            return self.unused_static_textures.pop().unwrap();
+            let to_use = self.unused_static_textures.pop().unwrap();
+            self.set_draw_blend_mode(to_use, is_eraser);
+            return to_use;
         }
-        self.new_static_texture()
+        let new = self.new_static_texture();
+        self.set_draw_blend_mode(new, is_eraser);
+        new
     }
-    pub fn make_static(&mut self, target_id: usize) {
-        let stat_id = self.init_static_texture();
+    pub fn make_static(&mut self, target_id: usize, is_eraser: bool) {
+        let stat_id = self.init_static_texture(is_eraser);
         let target = &mut self.draw_textures[target_id];
         let mut pixel_data = Vec::new();
         self.canvas
@@ -140,7 +137,6 @@ impl TextureManager<'_> {
             .t_creator
             .create_texture_static(PixelFormatEnum::RGBA8888, DRAW_TEX_SIZE, DRAW_TEX_SIZE)
             .expect("Failed to create static texture");
-        Self::set_draw_blend_mode(&tex);
 
         self.draw_textures.push(tex);
         id
@@ -151,16 +147,30 @@ impl TextureManager<'_> {
             .t_creator
             .create_texture_target(PixelFormatEnum::RGBA8888, DRAW_TEX_SIZE, DRAW_TEX_SIZE)
             .expect("Failed to create target texture");
-        Self::set_draw_blend_mode(&tex);
 
         self.draw_textures.push(tex);
         id
     }
-    fn set_draw_blend_mode(tex: &Texture) {
+    fn set_draw_blend_mode(&mut self, tex_id: usize, is_eraser: bool) {
+        let tex = &self.draw_textures[tex_id];
+        if is_eraser {
+            unsafe {
+                let custom = SDL_ComposeCustomBlendMode(
+                    sdl2::sys::SDL_BlendFactor::SDL_BLENDFACTOR_ZERO,
+                    sdl2::sys::SDL_BlendFactor::SDL_BLENDFACTOR_ONE,
+                    sdl2::sys::SDL_BlendOperation::SDL_BLENDOPERATION_ADD,
+                    sdl2::sys::SDL_BlendFactor::SDL_BLENDFACTOR_ONE,
+                    sdl2::sys::SDL_BlendFactor::SDL_BLENDFACTOR_ONE,
+                    sdl2::sys::SDL_BlendOperation::SDL_BLENDOPERATION_REV_SUBTRACT,
+                );
+                SDL_SetTextureBlendMode(tex.raw(), custom);
+            }
+            return;
+        }
         unsafe {
             let custom = SDL_ComposeCustomBlendMode(
+                //color similar to BlendMode::Blend, but do not change src color
                 sdl2::sys::SDL_BlendFactor::SDL_BLENDFACTOR_ONE,
-                // sdl2::sys::SDL_BlendFactor::SDL_BLENDFACTOR_ONE,
                 sdl2::sys::SDL_BlendFactor::SDL_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
                 sdl2::sys::SDL_BlendOperation::SDL_BLENDOPERATION_ADD,
                 sdl2::sys::SDL_BlendFactor::SDL_BLENDFACTOR_ONE,

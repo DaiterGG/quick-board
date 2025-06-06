@@ -1,31 +1,25 @@
-// #![windows_subsystem = "windows"]
+// to disable (console + app) mode on release builds for windows
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 extern crate indices;
 extern crate sdl2;
-
 mod app;
 mod debug;
 
-use std::{env, path::Path, thread::sleep, time::*};
+use std::{env, time::*};
 
 use app::{
     action_pump::*, canvas_manager::CanvasManager, coords::WH, cursor::CursorManager,
     event_manager::EventManager, input_state::InputState, predefined::Id, texture_manager::*,
     ui_manager::UIManager, ui_map::UIMap,
 };
-use sdl2::{
-    VideoSubsystem,
-    image::*,
-    pixels::{Color, PixelFormatEnum},
-    rect::Rect,
-    video::*,
-};
+use sdl2::{VideoSubsystem, image::*, render::BlendMode, video::*};
 
 pub fn main() -> Result<(), String> {
     unsafe {
         env::set_var("RUST_BACKTRACE", "1");
     }
+
     let sdl = sdl2::init()?;
     let video_subsystem = sdl.video()?;
     let _image_context = sdl2::image::init(InitFlag::PNG | InitFlag::JPG)?;
@@ -50,11 +44,12 @@ pub fn main() -> Result<(), String> {
         .map_err(|e| e.to_string())?;
 
     ActionPump::init();
+
     let mut texture_manager = TextureManager::new(window, bpr);
     let mut ui_manager = UIManager::new(texture_manager.canvas.window().size().1);
     let mut ui_map = UIMap::new();
     let mut canvas_manager =
-        CanvasManager::new(&mut texture_manager, &mut ui_map, Id::DrawWindow as i32);
+        CanvasManager::new(&mut texture_manager, &mut ui_map, Id::DrawWindow.into());
     let cursor_manager = CursorManager::new(
         canvas_manager.data.screen_zoom,
         canvas_manager.tools.get_size(canvas_manager.current_tool),
@@ -62,28 +57,13 @@ pub fn main() -> Result<(), String> {
     );
     let mut input = InputState::new(cursor_manager);
 
-    // let mut fps = FPSManager::new();
-    // println!("err {:?}", fps.set_framerate(200));
-
-    // let ttf_context = sdl2::ttf::init().map_err(|e| e.to_string())?;
-    // let mut font = ttf_context.load_font("../resources/fonts/inter.ttf", 128)?;
-    // font.set_style(sdl2::ttf::FontStyle::BOLD);
-    // let surface = font
-    //     .render("Hello Rust!")
-    //     .blended(Color::RGBA(255, 0, 0, 255))
-    //     .map_err(|e| e.to_string())?;
-    // let texture = texture_manager
-    //     .t_creator
-    //     .create_texture_from_surface(&surface)
-    //     .map_err(|e| e.to_string())?;
-    // texture_manager.canvas.copy(&texture, None, None)?;
-    // texture_manager.canvas.present();
-    // sleep(Duration::from_secs(1));
-
     let mut time = Instant::now();
     let mut last_frame = Instant::now();
     let mut lazy_buffer = Instant::now();
-    let mut frames = 0;
+    let mut frames_fps = 0;
+    let mut frames_counter = 0;
+    //seconds between frames
+    let mut delta = 0.001;
     'main: loop {
         // Get the input and updates from user
         let res =
@@ -99,8 +79,11 @@ pub fn main() -> Result<(), String> {
         ActionPump::apply(
             &mut canvas_manager,
             &mut ui_manager,
+            &mut ui_map,
             &mut input,
             &mut texture_manager,
+            delta,
+            frames_counter,
         );
 
         // Update the UI layout if nessesary
@@ -127,23 +110,31 @@ pub fn main() -> Result<(), String> {
         // std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 200));
         // fps.delay();
 
+        frames_fps += 1;
+        frames_counter += 1;
         // fps lock
-        frames += 1;
         let elapsed = last_frame.elapsed();
         if elapsed < Duration::new(0, 1_000_000_000u32 / 1000) {
-            // NOTE: this does not give exactly 1000 fps, probably bc it sleeps more than 1 ms
+            // NOTE: this does not give exactly 1000 fps, bc sleep is not precise
             std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 1000) - elapsed);
+        }
+        delta = last_frame.elapsed().as_secs_f32();
+        if delta == 0.0 {
+            delta = 0.001;
         }
         // fps counter
         last_frame = Instant::now();
         if time.elapsed() >= Duration::from_secs(5) {
-            // println!("fps: {}", frames / 5);
+            println!("fps: {}", frames_fps / 5);
             time = Instant::now();
-            frames = 0;
+            frames_fps = 0;
         }
     }
     Ok(())
 }
+// ui buffer textures has to be some size that will be sufficient for biggest display user has
+// NOTE: to prevent changing landscape and portrait modes, it is always a big square
+// FIXME: if possibel track such changes in event manager, and update every buffer
 fn init_biggest_possible_display_res(video_subsystem: &VideoSubsystem) -> i32 {
     let mut max_wh = -1;
     let count = video_subsystem.num_video_displays().unwrap_or(1);

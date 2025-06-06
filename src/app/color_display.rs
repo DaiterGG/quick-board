@@ -1,5 +1,9 @@
-use sdl2::render::BlendMode::Blend;
-use sdl2::{pixels::Color, rect::Rect, render::Canvas, video::Window};
+use sdl2::{
+    pixels::Color,
+    rect::Rect,
+    render::{BlendMode, Canvas},
+    video::Window,
+};
 
 use super::{
     color_map::{ColorMap, ColorTag},
@@ -22,7 +26,7 @@ impl ColorDisplay {
         let mut rgba: Color = colors.get(self.color);
         rgba.a = self.alfa as u8;
         canvas.set_draw_color(rgba);
-        canvas.set_blend_mode(Blend);
+        canvas.set_blend_mode(BlendMode::Blend);
         let _ = canvas.fill_rect(Rect::new(pos.x, pos.y, pos.w as u32, pos.h as u32));
     }
 }

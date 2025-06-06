@@ -1,14 +1,9 @@
-use sdl2::pixels::Color;
-
-use crate::{Action, Observed, dl};
-
-use super::{
-    color_map::ColorTag, coords::*, input_state::InputState, predefined::*,
+use crate::app::{
+    action_pump::Action, coords::*, input_state::InputState, observed::Observed, predefined::*,
     texture_manager::TextureManager, ui_element::*, ui_map::UIMap,
 };
 
-const UI_SCALE: f32 = 1.0;
-/// layers: root elements (ids), z-indexed
+/// layers: root elements, z-indexed
 pub struct UIManager {
     layers: Vec<Id32>,
     pub requires_update: bool,
@@ -21,7 +16,6 @@ impl UIManager {
             requires_update: true,
             ui_scale: Observed::new(
                 window_hight as f32 / 1080f32,
-                // UI_SCALE,
                 Box::new(|s: f32| Action::UISizeObserve(s)),
             ),
         }
@@ -77,14 +71,6 @@ impl UIManager {
 
     /// called once per frame
     pub fn draw_ui(&self, ui_map: &UIMap, t_manager: &mut TextureManager) {
-        t_manager
-            .canvas
-            .set_draw_color(ui_map.colors.get(ColorTag::Deep));
-        t_manager.canvas.clear();
-
-        // let dis = self.styles.get_display(self.layers[0].id);
-        // dis.inspect(|d| println!("{:?}", d.active_states));
-
         for i in 0..self.layers.len() {
             ui_map
                 .elements
@@ -93,5 +79,23 @@ impl UIManager {
         }
 
         t_manager.canvas.present();
+    }
+}
+#[cfg(test)]
+mod tests {
+    use crate::ActionPump;
+
+    use super::*;
+
+    #[test]
+    pub fn fit() {
+        ActionPump::init();
+        let win = XYWH::new(0, 0, 1000, 1000);
+        let ui = &mut UIMap::new();
+        UIManager::update_rec(Id::ForTest1.into(), win, ui, 1.0);
+        assert_eq!(ui.elements.get(Id::ForTestSub1.into()).transform.x, 0);
+        assert_eq!(ui.elements.get(Id::ForTestSub1.into()).transform.w, 400);
+        assert_eq!(ui.elements.get(Id::ForTestSub2.into()).transform.x, 400);
+        assert_eq!(ui.elements.get(Id::ForTestSub2.into()).transform.w, 600);
     }
 }

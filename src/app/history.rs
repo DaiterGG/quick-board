@@ -1,12 +1,20 @@
 use std::cmp::min;
 
-use sdl2::pixels::Color;
+use sdl2::{
+    pixels::Color,
+    render::{BlendMode, TextureAccess},
+};
 
 use crate::{d, dl};
 
 use super::{
-    canvas_manager::CanvasData, coords::XYWH, history_step::HistoryStep, layer::Layer,
+    canvas_manager::CanvasData,
+    coords::{WH, XYWH},
+    history_step::HistoryStep,
+    layer::Layer,
+    texture_data::TextureData,
     texture_manager::TextureManager,
+    texture_vec::TexId16,
 };
 
 pub struct History {
@@ -14,6 +22,9 @@ pub struct History {
     pub selected_h_step: Option<usize>,
     pub layers: Vec<Layer>,
     pub selected_layer: Option<usize>,
+
+    // TODO: remove this when layers are done
+    temp_tex: Option<TexId16>,
 }
 impl History {
     pub fn new() -> Self {
@@ -22,6 +33,7 @@ impl History {
             layers: Vec::new(),
             steps: Vec::new(),
             selected_h_step: None,
+            temp_tex: None,
         }
     }
     /// returns None if there is no selected step
@@ -29,7 +41,7 @@ impl History {
         let step = &mut self.steps[self.selected_h_step?];
         if step.is_static { None } else { Some(step) }
     }
-    pub fn add_step(&mut self) -> &mut HistoryStep {
+    pub fn add_step(&mut self, is_eraser: bool) -> &mut HistoryStep {
         let current_layer_id = self.selected_layer.unwrap_or(self.add_layer());
         let current_layer = &mut self.layers[current_layer_id];
 
@@ -45,31 +57,8 @@ impl History {
 
         self.selected_h_step = Some(new_id);
 
-        // if let Some(leaf_id) = current_layer.leaf_id {
-        //     // FIXME:
-        //     // trying to catch a bug
-        //     // "leaf not found" = "leaf not found", self.steps.len() = 0, leaf_id = 0, self.selected_h_step = Some(0), src\app\history.rs:53
-        //     if self.steps.get(leaf_id).is_none() {
-        //         d!("leaf not found");
-        //         d!(self.steps.len());
-        //         d!(leaf_id);
-        //         dl!(self.selected_h_step);
-        //         panic!();
-        //     }
-
-        //     //modify leaf to point to new leaf
-        //     self.steps[leaf_id].next_layer_step = Some(new_id);
-        //     //update layer
-        //     current_layer.leaf_id = Some(new_id);
-        //     //add new step, that points to the old leaf
-        // } else {
-        //     current_layer.root_id = Some(new_id);
-        //     current_layer.leaf_id = Some(new_id);
-
-        //     //add root and set it to the current layer
-        // }
         self.set_leaf_to_current();
-        self.steps.push(HistoryStep::new());
+        self.steps.push(HistoryStep::new(is_eraser));
         &mut self.steps[new_id]
     }
     pub fn add_layer(&mut self) -> usize {
@@ -134,19 +123,51 @@ impl History {
         layer.root_id = None;
         layer.leaf_id = None;
     }
-    pub fn full_draw(&self, t_manager: &mut TextureManager, data: &CanvasData, dst: XYWH) {
-        let tex = &mut t_manager.textures.get_mut(data.targeted_ui_texture).texture;
+    pub fn full_draw(data: &mut CanvasData, t_manager: &mut TextureManager, dst: XYWH) {
+        let this = &mut data.history;
+
+        // TODO: remove this when layers are done
+        let temp_tex = if let Some(temp_tex) = this.temp_tex {
+            temp_tex
+        } else {
+            let mut td = TextureData::new(
+                &t_manager.t_creator,
+                WH::new_one(t_manager.biggest_possible_resolution),
+                None,
+                Some(TextureAccess::Target),
+            );
+            td.texture.set_blend_mode(BlendMode::Blend);
+            let temp_tex = t_manager.textures.init_texture(td);
+            this.temp_tex = Some(temp_tex);
+            temp_tex
+        };
         t_manager
             .canvas
-            .with_texture_canvas(tex, |c| {
-                c.set_draw_color(Color::RGBA(20, 20, 20, 255));
+            .with_texture_canvas(&mut t_manager.textures.get_mut(temp_tex).texture, |c| {
+                c.set_draw_color(Color::RGBA(0, 0, 0, 0));
                 c.clear();
             })
             .unwrap();
 
-        if self.selected_h_step.is_none() {
+        if this.selected_h_step.is_none() {
+            // TODO: remove this when layers are done
+            t_manager
+                .canvas
+                .with_texture_canvas(
+                    &mut t_manager.textures.get_mut(data.targeted_ui_texture).texture,
+                    |c| {
+                        c.set_draw_color(Color::RGBA(20, 20, 20, 255));
+                        c.clear();
+                    },
+                )
+                .unwrap();
             return;
         }
+
+        // TODO: remove this when layers are done
+        let orig_target = data.targeted_ui_texture;
+        data.targeted_ui_texture = temp_tex;
+
         let src = XYWH::new(
             -min(0, (data.screen_pos.x as f32 / data.screen_zoom) as i32),
             -min(0, (data.screen_pos.y as f32 / data.screen_zoom) as i32),
@@ -154,13 +175,28 @@ impl History {
             (dst.h as f32 / data.screen_zoom) as i32,
         );
 
-        for step_id in 0..(self.selected_h_step.unwrap() + 1) {
-            if data.transform.w > 10_000 || data.transform.h > 10_000 {
-                self.steps[step_id].full_draw_double(t_manager, data, src, dst);
-            } else {
-                self.steps[step_id].full_draw(t_manager, data, src, dst);
-            }
+        for step_id in 0..(this.selected_h_step.unwrap() + 1) {
+            // if data.transform.w > 10_000 || data.transform.h > 10_000 {
+            //     self.steps[step_id].full_draw_double(t_manager, data, src, dst);
+            // } else {
+            data.history.steps[step_id].full_draw(t_manager, data, src, dst);
+            // }
         }
+
+        // TODO: remove this when layers are done
+        let (tex, temp) = t_manager
+            .textures
+            .get_mut_2(orig_target, data.history.temp_tex.unwrap());
+        t_manager
+            .canvas
+            .with_texture_canvas(&mut tex.texture, |c| {
+                c.set_draw_color(Color::RGBA(20, 20, 20, 255));
+                c.clear();
+                c.copy_f(&temp.texture, None, None).unwrap();
+            })
+            .unwrap();
+
+        data.targeted_ui_texture = orig_target;
     }
     pub fn finish_step(&mut self, t_manager: &mut TextureManager) {
         if self.selected_h_step.is_none() {

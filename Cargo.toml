@@ -33,6 +33,9 @@ features = ["ttf","image","unsafe_textures","gfx","static-link","use-vcpkg"]
 name = "main"
 harness = false
 
+[build-dependencies]
+winresource = "0.1.22"
+
 
 [package.metadata.vcpkg]
 dependencies = ["sdl2", "sdl2-image[libjpeg-turbo,tiff,libwebp]", "sdl2-ttf", "sdl2-gfx", "sdl2-mixer"]

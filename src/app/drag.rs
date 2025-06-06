@@ -1,6 +1,4 @@
-use crate::{TextureManager, app::action_pump::Action, dl};
-
-use super::{action_pump::ActionPump, input_state::*, predefined::*, ui_map::UIMap};
+use crate::app::{action_pump::Action, action_pump::ActionPump, input_state::*, predefined::*};
 
 pub struct Drag {}
 impl Drag {

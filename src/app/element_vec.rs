@@ -1,6 +1,5 @@
 use super::{
-    predefined::{Id, Id32, Predefined},
-    style_display::Display,
+    predefined::{Id, Id32},
     ui_element::UIElement,
 };
 
@@ -8,9 +7,8 @@ pub struct ElementVec {
     vec: Vec<Option<UIElement>>,
 }
 impl ElementVec {
-    pub fn init() -> Self {
-        let predefined = Predefined::init();
-        Self { vec: predefined }
+    pub fn new(vec: Vec<Option<UIElement>>) -> Self {
+        Self { vec }
     }
     pub fn push(&mut self, element: UIElement) {
         self.vec.push(Some(element));

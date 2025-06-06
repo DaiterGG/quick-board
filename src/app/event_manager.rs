@@ -1,12 +1,13 @@
-use sdl2::{EventPump, Sdl, event::*, keyboard::Keycode, mouse::*};
+use sdl2::{EventPump, Sdl, event::*, keyboard::Keycode};
 
-use crate::{
-    TextureManager,
-    app::{canvas_manager, input_state::ButtonState, texture_manager},
-    d, dl,
+use crate::app::{
+    action_pump::*,
+    coords::*,
+    input_state::{ButtonState, InputState},
+    texture_manager::TextureManager,
+    tool_trait::*,
+    ui_manager::*,
 };
-
-use super::{action_pump::*, coords::*, input_state::InputState, tool_trait::*, ui_manager::*};
 
 pub struct EventManager {
     pump: EventPump,

@@ -98,4 +98,12 @@ impl ColorOperations {
         let hsv = Hsv::from_color(rgb).into_format::<f32>();
         hsv.into_components().2
     }
+
+    pub fn reverse_color(color: Color) -> Color {
+        let mut rgb = Srgb::new(color.r, color.g, color.b).into_format::<u8>();
+        rgb.red = 255 - rgb.red;
+        rgb.green = 255 - rgb.green;
+        rgb.blue = 255 - rgb.blue;
+        Color::RGB(rgb.red, rgb.green, rgb.blue)
+    }
 }

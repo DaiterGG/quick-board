@@ -1,20 +1,18 @@
-use num::Float;
-use num::cast::ToPrimitive;
 use std::cmp::*;
 
 use sdl2::rect::*;
 
-use crate::*;
+use super::{canvas_manager::CanvasData, coords::*, texture_manager::*};
 
-use super::{canvas_manager::CanvasData, coords::*, texture_data::TextureData, texture_manager::*};
-
-// TODO: rename into dynamic texture
+// TODO: rename into dynamic texture when there will be different types of history step
 pub struct HistoryStep {
     //maintainable onedirectional linked list, to be able
     //to 'walk' on specific layer
     pub next_layer_step: Option<usize>,
     pub is_static: bool,
-    // pub prev_layer_step: Option<usize>,
+    pub is_eraser: bool,
+
+    // TODO: inline rows?
     rows: Vec<TextureRow>,
     rows_offset: i32,
 
@@ -22,12 +20,12 @@ pub struct HistoryStep {
     flat_copy: Vec<TextureUnit>,
 }
 impl HistoryStep {
-    pub fn new() -> Self {
+    pub fn new(is_eraser: bool) -> Self {
         Self {
             is_static: false,
-            // prev_layer_step: None,
             next_layer_step: None,
             rows: Vec::new(),
+            is_eraser,
             rows_offset: 0,
             flat_copy: Vec::new(),
         }
@@ -82,97 +80,16 @@ impl HistoryStep {
                 id,
                 &mut self.flat_copy,
                 t_manager,
+                self.is_eraser,
             );
             vec.extend(row);
         }
         vec
     }
-    //  NOTE: return single texture unit
-    // pub fn get_texture(&mut self, pos: XY, t_manager: &mut TextureManager) -> TextureUnit {
-    //     let id_pos = XY::new(coord_to_id(pos.x), coord_to_id(pos.y));
-    //     let mut true_id = id_pos.y + self.rows_offset;
-    //     if true_id < 0 {
-    //         let to_insert = true_id.abs();
-    //         self.rows_offset += to_insert;
-    //         true_id = 0;
-    //         let mut vec = Vec::new();
-    //         for _ in 0..to_insert {
-    //             vec.push(TextureRow::new());
-    //         }
-    //         self.rows.splice(0..0, vec);
-    //     } else if true_id >= self.rows.len() as i32 {
-    //         let to_insert = true_id - self.rows.len() as i32 + 1;
-    //         for _ in 0..to_insert {
-    //             self.rows.push(TextureRow::new());
-    //         }
-    //     }
-    //     self.rows[true_id as usize].get_texture(id_pos.x, id_pos.y, t_manager)
-    // }
 
-    /// duplicated function for when canvas is really large
-    pub fn full_draw_double(
-        &self,
-        t_manager: &mut TextureManager,
-        data: &CanvasData,
-        src: XYWH,
-        dst: XYWH,
-    ) {
-        let ui_tex = &mut t_manager.textures.get_mut(data.targeted_ui_texture).texture;
-        let units = self.get_textures_for_copy(src);
-
-        let zoom_64 = data.screen_zoom as f64;
-        let to_ui_coord_wh = DRAW_TEX_SIZE as f64 * zoom_64;
-
-        let dst_x = dst.x as f64;
-        let dst_y = dst.y as f64;
-        let dst_w = dst.w as f64;
-        let dst_h = dst.h as f64;
-
-        for i in 0..units.len() {
-            let unit = units[i];
-            let tex = &t_manager.draw_textures[unit.id];
-
-            let to_ui_coord_x = (unit.origin.x as f64 * zoom_64) + data.screen_pos.x as f64;
-            let to_ui_coord_y = (unit.origin.y as f64 * zoom_64) + data.screen_pos.y as f64;
-
-            let overlap_x = f64::max(to_ui_coord_x, dst_x);
-            let overlap_y = f64::max(to_ui_coord_y, dst_y);
-
-            let overlap_w = f64::min(to_ui_coord_x + to_ui_coord_wh, dst_x + dst_w) - overlap_x;
-            let overlap_h = f64::min(to_ui_coord_y + to_ui_coord_wh, dst_y + dst_h) - overlap_y;
-
-            let w_f = overlap_w / zoom_64;
-            let h_f = overlap_h / zoom_64;
-            let x = (f64::max(0.0, dst_x - to_ui_coord_x) / zoom_64) as i32;
-            let y = (f64::max(0.0, dst_y - to_ui_coord_y) / zoom_64) as i32;
-            let w = w_f.ceil();
-            let h = h_f.ceil();
-            let unit_src = Rect::new(x, y, w as u32, h as u32);
-            let mut unit_dst = FRect::new(
-                overlap_x as f32,
-                overlap_y as f32,
-                overlap_w as f32,
-                overlap_h as f32,
-            );
-
-            let dif_x = (w - w_f) * zoom_64;
-            unit_dst.w += dif_x as f32;
-            if unit_src.x != 0 {
-                unit_dst.x -= dif_x as f32;
-            }
-            // if dst_w > unit_dst.w {}
-
-            let dif_y = (h - h_f) * zoom_64;
-            unit_dst.h += dif_y as f32;
-            if unit_src.y != 0 {
-                unit_dst.y -= dif_y as f32;
-            }
-            // if dst_h > unit_dst.h {}
-            let _ = t_manager.canvas.with_texture_canvas(ui_tex, |c| {
-                let _ = c.copy_f(tex, unit_src, unit_dst);
-            });
-        }
-    }
+    // TODO:
+    /// duplicated function for when canvas is really large (use f64)
+    pub fn full_draw_double() {}
 
     pub fn full_draw(
         &self,
@@ -186,7 +103,6 @@ impl HistoryStep {
 
         let to_ui_coord_wh = DRAW_TEX_SIZE as f32 * data.screen_zoom;
 
-        // NOTE: inlined to convert middle state into f32 to eliminate rounding errors
         let dst_x = dst.x as f32;
         let dst_y = dst.y as f32;
         let dst_w = dst.w as f32;
@@ -204,7 +120,7 @@ impl HistoryStep {
             let overlap_x = f32::max(to_ui_coord_x, dst_x);
             let overlap_y = f32::max(to_ui_coord_y, dst_y);
 
-            // NOTE: bc dst_x + dst_w is i32, movement is discrete when one tex is taking full screen
+            // BUG: bc dst_x + dst_w is i32, movement is discrete when one tex is taking full screen
             let overlap_w = f32::min(to_ui_coord_x + to_ui_coord_wh, dst_x + dst_w) - overlap_x;
             let overlap_h = f32::min(to_ui_coord_y + to_ui_coord_wh, dst_y + dst_h) - overlap_y;
 
@@ -212,8 +128,8 @@ impl HistoryStep {
             let h_f = overlap_h / data.screen_zoom;
             let x = (f32::max(0.0, dst_x - to_ui_coord_x) / data.screen_zoom) as i32;
             let y = (f32::max(0.0, dst_y - to_ui_coord_y) / data.screen_zoom) as i32;
-            let w = w_f.ceil();
-            let h = h_f.ceil();
+            let w = f32::min(w_f, DRAW_TEX_SIZE as f32).ceil();
+            let h = f32::min(h_f, DRAW_TEX_SIZE as f32).ceil();
             let unit_src = Rect::new(x, y, w as u32, h as u32);
 
             let mut unit_dst = FRect::new(overlap_x, overlap_y, overlap_w, overlap_h);
@@ -222,36 +138,13 @@ impl HistoryStep {
             if unit_src.x != 0 {
                 unit_dst.x -= dif_x;
             }
-            // if dst_w > unit_dst.w {}
 
             let dif_y = (h - h_f) * data.screen_zoom;
             unit_dst.h += dif_y;
             if unit_src.y != 0 {
                 unit_dst.y -= dif_y;
             }
-            // if dst_h > unit_dst.h {}
 
-            // if unit_src.y > 50 {
-            //     print!("{} {}, ", to_ui_coord_y + to_ui_coord_wh, dst_y + dst_h);
-            //     print!(
-            //         "{} {} {} {}, ",
-            //         unit_src.x, unit_src.y, unit_src.w, unit_src.h
-            //     );
-            //     println!(
-            //         "{} {} {} {}",
-            //         unit_dst.x, unit_dst.y, unit_dst.w, unit_dst.h
-            //     );
-            // }
-            // if unit_src.x == 0 || unit_src.y == 0 {
-            //     print!(
-            //         "{} {} {} {}, ",
-            //         unit_src.x, unit_src.y, unit_src.w, unit_src.h
-            //     );
-            //     print!(
-            //         "{} {} {} {}, ",
-            //         unit_dst.x, unit_dst.y, unit_dst.w, unit_dst.h
-            //     );
-            // }
             t_manager
                 .canvas
                 .with_texture_canvas(ui_tex, |c| c.copy_f(tex, unit_src, unit_dst).unwrap())
@@ -264,7 +157,7 @@ impl HistoryStep {
         }
         for i in 0..self.flat_copy.len() {
             let unit = self.flat_copy[i];
-            t_manager.make_static(unit.id);
+            t_manager.make_static(unit.id, self.is_eraser);
         }
         self.is_static = true;
     }
@@ -289,6 +182,7 @@ impl TextureRow {
         row_id: i32,
         flat: &mut Vec<TextureUnit>,
         t_manager: &mut TextureManager,
+        is_eraser: bool,
     ) -> Vec<TextureUnit> {
         let mut vec = Vec::new();
         for id in left_id..(right_id + 1) {
@@ -312,10 +206,9 @@ impl TextureRow {
                 vec.push(unit);
             } else {
                 let unit = TextureUnit {
-                    id: t_manager.init_target_texture(),
+                    id: t_manager.init_target_texture(is_eraser),
                     origin: XY::new(id_to_coord(id), id_to_coord(row_id)),
                 };
-                // println!("init id: {}, {}", id_to_coord(id), id_to_coord(row_id));
                 self.units[true_id as usize] = Some(unit);
                 flat.push(unit);
 
@@ -324,47 +217,11 @@ impl TextureRow {
         }
         vec
     }
-    //  NOTE: return single texture unit
-    // fn get_texture(&mut self, id: i32, row_id: i32, t_manager: &mut TextureManager) -> TextureUnit {
-    //     let mut true_id = id + self.row_offset;
-    //     if true_id < 0 {
-    //         let to_insert = true_id.abs();
-    //         self.row_offset += to_insert;
-    //         let mut vec = Vec::new();
-    //         for _ in 0..to_insert {
-    //             vec.push(None);
-    //         }
-    //         self.units.splice(0..0, vec);
-    //         true_id = 0;
-    //     } else if true_id >= self.units.len() as i32 {
-    //         let to_insert = true_id - self.units.len() as i32 + 1;
-    //         for _ in 0..to_insert {
-    //             self.units.push(None);
-    //         }
-    //     }
-    //     if let Some(unit) = self.units[true_id as usize] {
-    //         unit
-    //     } else {
-    //         let unit = TextureUnit {
-    //             id: t_manager.init_draw_texture(),
-    //             origin: XY::new(id_to_coord(id), id_to_coord(row_id)),
-    //         };
-    //         self.units[true_id as usize] = Some(unit);
-    //         unit
-    //     }
-    // }
 }
 
-//DRAW_TEX_SIZE = 256
-// 0 -> 0, 255 -> 0, 256 -> 1
-// -256 -> -1, -257 -> -2
 fn coord_to_id(coord: i32) -> i32 {
     f32::floor(coord as f32 / DRAW_TEX_SIZE as f32) as i32
-    // off by 1 at -257
-    // coord / DRAW_TEX_SIZE as i32
 }
-// 0 -> 0, 1 -> 256
-// -1 -> -256
 fn id_to_coord(id: i32) -> i32 {
     id * DRAW_TEX_SIZE_I32
 }

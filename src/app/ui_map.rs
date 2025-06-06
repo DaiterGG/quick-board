@@ -1,13 +1,14 @@
 use std::any::Any;
 use std::collections::HashMap;
 
-use super::align_vec::AlignVec;
-use super::display_vec::DisplayVec;
-use super::element_vec::ElementVec;
-use super::predefined::Id32;
-use super::predefined_styles::PredefinedStyles;
-
-use super::color_map::*;
+use super::{
+    align_vec::AlignVec,
+    color_map::*,
+    display_vec::DisplayVec,
+    element_vec::ElementVec,
+    predefined::{Id32, Predefined},
+    predefined_styles::PredefinedStyles,
+};
 
 pub type ElemDataMap = HashMap<Id32, Box<dyn Any>>;
 pub struct UIMap {
@@ -21,20 +22,14 @@ pub struct UIMap {
 
 impl UIMap {
     pub fn new() -> Self {
+        let elements = ElementVec::new(Predefined::init());
         let (aligns, displays, elements_data) = PredefinedStyles::init();
         Self {
-            elements: ElementVec::init(),
+            elements,
             aligns,
             displays,
             elements_data,
             colors: ColorMap::new(),
         }
-    }
-}
-
-#[cfg(test)]
-impl Default for UIMap {
-    fn default() -> Self {
-        Self::new()
     }
 }

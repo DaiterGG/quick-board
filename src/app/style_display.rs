@@ -76,8 +76,6 @@ impl Display {
         colors: &ColorMap,
         textures: &mut TextureManager,
     ) {
-        // println!("{:?}", self.active_states);
-        // println!("{:?}", self.states_data);
         for i in 0..DisplayState::Total as usize {
             if self.active_states[i] {
                 if let Some(data) = &self.states_data[i] {
@@ -179,16 +177,3 @@ impl DisplayData {
         t_manager.canvas.copy(&data.texture, src, dst).unwrap();
     }
 }
-// impl Clone for DisplayData {
-//     fn clone(&self) -> Self {
-//         assert!(self.texture_id == TexId::None);
-//         DisplayData {
-//             texture_id: TexId::None,
-//             draw_at_front: self.draw_at_front,
-//             color: self.color,
-//             sub_color: self.sub_color,
-//             edge_radius: self.edge_radius,
-//             border: self.border.clone(),
-//         }
-//     }
-// }

@@ -1,18 +1,12 @@
 use sdl2::pixels::Color;
 
-use crate::app::color_operations::ColorOperations;
-use crate::app::slider::Slider;
-use crate::app::txt::Txt;
+use crate::app::{
+    canvas_manager::CanvasManager, color_map::ColorTag, color_operations::ColorOperations,
+    coords::*, input_state::InputState, predefined::*, slider::Slider,
+    texture_manager::TextureManager, tool_trait::ToolId, txt::Txt, ui_manager::UIManager,
+    ui_map::UIMap,
+};
 
-use super::coords::{XYF32, *};
-use super::input_state::InputState;
-use super::predefined::*;
-
-use super::canvas_manager::CanvasManager;
-use super::texture_manager::TextureManager;
-use super::tool_trait::ToolId;
-use super::ui_manager::UIManager;
-use super::ui_map::UIMap;
 use std::collections::HashMap;
 use std::mem::take;
 use std::sync::{Mutex, OnceLock};
@@ -117,6 +111,9 @@ impl ActionPump {
                 ButtonPressed(id) if id == Id::SampleButton.into() => {
                     c_manager.change_tool(ToolId::Sample);
                 }
+                ButtonPressed(id) if id == Id::BrushEraseCheck.into() => {
+                    c_manager.tools.brush.erase_mode = !c_manager.tools.brush.erase_mode;
+                }
                 Drag(id, delta) if id == Id::ToolSizeDrag.into() && delta.x != 0.0 => {
                     const CONST: f32 = 0.5;
                     let d_x = delta.x * CONST * ui.ui_scale.get();
@@ -136,7 +133,7 @@ impl ActionPump {
                     const CONST: f32 = 0.5;
                     let val = if delta.x > 0.0 { 1 } else { -1 }
                         * (delta.x * CONST * ui.ui_scale.get()).abs().ceil() as i32;
-                    let den = &mut c_manager.tools.brush.draw_gap_percent;
+                    let den = &mut c_manager.tools.brush.draw_density;
                     den.set((den.get() + val).clamp(1, 800));
                 }
                 Drag(id, delta) if id == Id::BrushAlfaDrag.into() && delta.x != 0.0 => {
@@ -195,6 +192,7 @@ impl ActionPump {
                 }
                 WindowResized => {
                     c_manager.tools.brush.generate_circle_mask(t_manager);
+                    c_manager.tools.brush.generate_circle_alfa_mask(t_manager);
                     c_manager.tools.brush.update_buffer(t_manager);
                     ui.requires_update = true;
                 }
@@ -226,6 +224,11 @@ impl ActionPump {
                         c_manager.data.last_hue,
                         c_manager.data.last_saturation,
                     );
+                    ui_map.colors.set(ColorTag::CurrentColor, color);
+                    ui_map.colors.set(
+                        ColorTag::CurrentColorReverse,
+                        ColorOperations::reverse_color(color),
+                    );
                 }
                 UISizeObserve(size) => {
                     for id in callbacks.get(&TxtScale).unwrap_or(&vec![]) {
@@ -254,10 +257,10 @@ impl ActionPump {
                         );
                     }
                 }
-                BrushDensityObserve(draw_gap_percent) => {
+                BrushDensityObserve(draw_density) => {
                     for id in callbacks.get(&BrushDensityTxt).unwrap_or(&vec![]) {
                         Txt::update_text(
-                            format!("{}", draw_gap_percent),
+                            format!("{}", draw_density),
                             *id,
                             ui_map,
                             t_manager,
@@ -288,25 +291,5 @@ impl ActionPump {
                 _ => (),
             }
         }
-    }
-}
-pub struct Observed<T: Sized> {
-    value: T,
-    action: Box<dyn Fn(T) -> Action>,
-}
-impl<T: Copy> Observed<T> {
-    pub fn get(&self) -> T {
-        self.value
-    }
-    // pub fn new_silent(value: T, action: Box<dyn Fn(T) -> Action>) -> Observed<T> {
-    //     Observed { value, action }
-    // }
-    pub fn new(value: T, action: Box<dyn Fn(T) -> Action>) -> Observed<T> {
-        ActionPump::add(action(value));
-        Observed { value, action }
-    }
-    pub fn set(&mut self, value: T) {
-        self.value = value;
-        ActionPump::add((self.action)(self.value));
     }
 }

@@ -70,16 +70,16 @@ pub fn markup(input: TokenStream) -> TokenStream {
         let element_type = &node.element_type;
         let children = node.children.iter().map(|child| &child.variant);
         quote! {
-            UIElement::new(
+            Some(UIElement::new(
                 ElementType::#element_type,
-                Id::#variant as i32,
-                vec![#(Id::#children as i32),*]
-            )
+                Id::#variant.into(),
+                vec![#(Id::#children.into()),*]
+            ))
         }
     });
 
     let expanded = quote! {
-        #[derive(Copy, Clone, Debug, Eq, PartialEq)]
+        #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
         #[allow(non_camel_case_types)]
         pub enum Id {
             #(#variants,)*
@@ -89,7 +89,7 @@ pub fn markup(input: TokenStream) -> TokenStream {
         pub struct Predefined;
 
         impl Predefined {
-            pub fn init() -> Vec<UIElement> {
+            pub fn init() -> Vec<Option<UIElement>> {
                 vec![
                     #(#elements,)*
                 ]

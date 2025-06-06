@@ -77,4 +77,16 @@ impl Slider {
         // NOTE: can be updated directly in the future
         ActionPump::add(Action::UIUpdate);
     }
+    fn update_handle(id: Id32, ui: &mut UIMap) {
+        let this = &ui.elements_data[&id]
+            .downcast_ref::<Slider>()
+            .unwrap_or_else(|| {
+                panic!(
+                    "element - '{:?}' is subscribed to a callback that expects a slider",
+                    id
+                )
+            });
+
+        let handle_d = ui.displays.get_mut(this.handle_id);
+    }
 }

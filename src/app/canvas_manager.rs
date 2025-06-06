@@ -1,14 +1,15 @@
-use app::{
-    action_pump::*, input_state::ButtonState, texture_data::TextureData, texture_vec::TexId16,
+use sdl2::{
+    pixels::Color,
+    render::{BlendMode, TextureAccess},
 };
-use sdl2::{pixels::Color, render::TextureAccess};
 
-use crate::*;
-
-use super::{
-    coords::*, history::History, input_state::InputState, predefined::*,
-    style_display::DisplayState, texture_manager::*, tool_trait::*, ui_map::UIMap,
+use crate::app::{
+    action_pump::*, coords::*, history::History, input_state::InputState, predefined::*,
+    style_display::DisplayState, texture_data::TextureData, texture_manager::*,
+    texture_vec::TexId16, tool_trait::*, ui_map::UIMap,
 };
+
+use super::observed::Observed;
 
 pub type StepId = usize;
 pub struct CanvasManager {
@@ -47,6 +48,14 @@ impl CanvasManager {
             None,
             Some(TextureAccess::Target),
         ));
+
+        // TODO: should be none after layers are done
+        t_manager
+            .textures
+            .get_mut(targeted_ui_texture)
+            .texture
+            .set_blend_mode(BlendMode::Blend);
+
         let draw_win_display = ui_map.displays.get_mut_unwrap(window_id).states_data
             [DisplayState::Idle as usize]
             .as_mut()
@@ -119,7 +128,7 @@ impl CanvasManager {
         ui_tex.src = Some(dst);
         ui_tex.dst = Some(dst);
 
-        self.data.history.full_draw(t_manager, &self.data, dst);
+        History::full_draw(&mut self.data, t_manager, dst);
     }
 
     pub fn change_tool(&mut self, tool_id: ToolId) {

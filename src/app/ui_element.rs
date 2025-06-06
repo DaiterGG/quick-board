@@ -8,6 +8,13 @@ use super::{
     predefined::*, style_display::DisplayState, texture_manager::TextureManager, ui_map::UIMap,
 };
 
+/// UIElement can be used in a tree context,
+/// but stored in a flat Vec
+///
+/// * `element_type`: the type of the element, can be promoted to a trait later
+/// * `id`: owns a handle to itself
+/// * `childrens`: list of handles to childrens, for a tree like structure
+/// * `transform`: current transform, set by StyleAlign every time ui needs to be updated
 pub struct UIElement {
     pub element_type: ElementType,
     pub id: Id32,
@@ -52,8 +59,6 @@ impl UIElement {
             dis.set_state(D::Pressed, input.left() == B::Pressed && hit);
             dis.set_state(D::Held, input.left() == B::Held && hit);
             dis.set_state(D::Released, input.left() == B::Released && hit);
-            // println!("{:?}", dis.active_states);
-            // println!("{:?}", states.pointer.left);
         }
         // element specific logic
         use ElementType as T;
@@ -84,7 +89,6 @@ impl UIElement {
         //     }
         //     _ => {} //div
         // }
-        // for ui_manager check
         hit
     }
     pub fn draw_to(&self, styles: &UIMap, textures: &mut TextureManager) {
@@ -93,9 +97,6 @@ impl UIElement {
 
         dis.as_ref()
             .inspect(|d| d.draw(self.transform, false, color, textures));
-        // if self.id == 16 {
-        //     println!("{:?}", dis.as_ref().unwrap().states_data[0].unwrap());
-        // }
 
         for i in 0..self.childrens.len() {
             styles
@@ -108,40 +109,3 @@ impl UIElement {
             .inspect(|d| d.draw(self.transform, true, color, textures));
     }
 }
-// #[cfg(test)]
-// impl Default for UIElement {
-//     fn default() -> Self {
-//         Self {
-//             element_type: ElementType::Div,
-//             id: Id::ForTest1 as usize,
-//             childrens: Vec::new(),
-//             transform: XYWH::default(),
-//         }
-//     }
-// }
-// #[cfg(test)]
-// mod tests {
-//     use crate::view::{coords::XYWH, ui_element::ElementType};
-
-//     use super::*;
-
-//     #[test]
-//     pub fn fit() {
-//         let win = XYWH::new(0, 0, 1000, 1000);
-//         let mut childs = vec![
-//             UIElement::new(Id::ForTest1 as usize, ElementType::Div, vec![]),
-//             UIElement::new(Id::ForTest2 as usize, ElementType::Div, vec![]),
-//         ];
-//         let mut div = UIElement::new(Id::ForTest1, ElementType::Div, childs);
-//         UIElement::update(
-//             Id::ForTest1 as usize,
-//             win,
-//             &mut UIMap::new(),
-//             &mut States::default(),
-//         );
-//         assert_eq!(div.childrens[0].transform.x, 0);
-//         assert_eq!(div.childrens[0].transform.w, 400);
-//         assert_eq!(div.childrens[1].transform.x, 400);
-//         assert_eq!(div.childrens[1].transform.w, 600);
-//     }
-// }

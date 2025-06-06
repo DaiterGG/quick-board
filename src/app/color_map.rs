@@ -12,6 +12,8 @@ pub enum ColorTag {
     Blue,
     Green,
     BorderDark,
+    CurrentColor,
+    CurrentColorReverse,
     Total,
 }
 
@@ -31,12 +33,17 @@ impl ColorMap {
         c[ColorTag::Red as usize] = Color::RGB(255, 0, 0);
         c[ColorTag::Blue as usize] = Color::RGB(0, 0, 255);
         c[ColorTag::Green as usize] = Color::RGB(0, 255, 0);
+        c[ColorTag::CurrentColor as usize] = Color::RGB(0, 0, 0);
+        c[ColorTag::CurrentColorReverse as usize] = Color::RGB(0, 0, 0);
         ColorMap { colors: c }
+    }
+    pub fn set(&mut self, tag: ColorTag, color: Color) {
+        self.colors[tag as usize] = color;
     }
     pub fn get(&self, tag: ColorTag) -> Color {
         self.colors[tag as usize]
     }
-    pub fn get_by_id(&self, id: usize) -> Color {
-        self.colors[id]
+    pub fn get_mut(&mut self, tag: ColorTag) -> &mut Color {
+        &mut self.colors[tag as usize]
     }
 }
