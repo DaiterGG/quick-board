@@ -88,12 +88,12 @@ impl Brush {
             buffer_id,
             erase_mode: false,
             alfa_mask_id,
-            sub_brush_diameter: Observed::new(50.0, Box::new(Action::ToolSizeObserve)),
-            draw_density: Observed::new(5, Box::new(Action::BrushDensityObserve)),
-            alfa_hardness: Observed::new(100, Box::new(Action::BrushHardnessObserve)),
-            last_stroke_at: XY::new(0, 0),
             mask_id,
-            alfa: Observed::new(1, Box::new(Action::BrushAlfaObserve)),
+            last_stroke_at: XY::new(0, 0),
+            sub_brush_diameter: Observed::new(6.0, Box::new(Action::ToolSizeObserve)),
+            alfa_hardness: Observed::new(1, Box::new(Action::BrushHardnessObserve)),
+            draw_density: Observed::new(5, Box::new(Action::BrushDensityObserve)),
+            alfa: Observed::new(100, Box::new(Action::BrushAlfaObserve)),
         };
         s.generate_circle_mask(t_manager);
         s.generate_circle_alfa_mask(t_manager);

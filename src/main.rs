@@ -13,7 +13,7 @@ use app::{
     event_manager::EventManager, input_state::InputState, predefined::Id, texture_manager::*,
     ui_manager::UIManager, ui_map::UIMap,
 };
-use sdl2::{VideoSubsystem, image::*, render::BlendMode, video::*};
+use sdl2::{VideoSubsystem, gfx::framerate::FPSManager, image::*, render::BlendMode, video::*};
 
 pub fn main() -> Result<(), String> {
     unsafe {
@@ -56,6 +56,9 @@ pub fn main() -> Result<(), String> {
         bpr,
     );
     let mut input = InputState::new(cursor_manager);
+
+    let mut fps = FPSManager::new();
+    fps.set_framerate(60).unwrap();
 
     let mut time = Instant::now();
     let mut last_frame = Instant::now();
@@ -104,20 +107,17 @@ pub fn main() -> Result<(), String> {
         //tell the data, that the frame is over
         input.reset();
 
-        // sdl.mouse()
-        //     .warp_mouse_in_window(&texture_manager.canvas.window(), 50, 50);
-
-        // std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 200));
-        // fps.delay();
+        fps.delay();
 
         frames_fps += 1;
         frames_counter += 1;
-        // fps lock
-        let elapsed = last_frame.elapsed();
-        if elapsed < Duration::new(0, 1_000_000_000u32 / 1000) {
-            // NOTE: this does not give exactly 1000 fps, bc sleep is not precise
-            std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 1000) - elapsed);
-        }
+        // NOTE: fps lock off
+        // let elapsed = last_frame.elapsed();
+        // if elapsed < Duration::new(0, 1_000_000_000u32 / 1000) {
+        //     // NOTE: this does not give exactly 1000 fps, bc sleep is not precise
+        //     std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 1000) - elapsed);
+        // }
+
         delta = last_frame.elapsed().as_secs_f32();
         if delta == 0.0 {
             delta = 0.001;

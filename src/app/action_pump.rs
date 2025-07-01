@@ -1,6 +1,6 @@
 use sdl2::pixels::Color;
 
-use crate::app::{
+use super::{
     canvas_manager::CanvasManager, color_map::ColorTag, color_operations::ColorOperations,
     coords::*, input_state::InputState, predefined::*, slider::Slider,
     texture_manager::TextureManager, tool_trait::ToolId, txt::Txt, ui_manager::UIManager,
