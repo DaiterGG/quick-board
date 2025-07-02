@@ -36,6 +36,8 @@ pub enum Action {
     BrushDensityObserve(i32),
     BrushHardnessObserve(i32),
     BrushAlfaObserve(i32),
+    BrushFollowObserve(i32),
+    BrushEraseObserve(bool),
 }
 #[derive(Copy, Clone, Hash, PartialEq, Eq)]
 pub enum Callback {
@@ -47,6 +49,8 @@ pub enum Callback {
     BrushHardnessTxt,
     BrushDensityTxt,
     BrushAlfaTxt,
+    BrushFollowTxt,
+    BrushEraseTxt,
 }
 
 pub static A_PUMP: OnceLock<ActionPump> = OnceLock::new();
@@ -112,7 +116,11 @@ impl ActionPump {
                     c_manager.change_tool(ToolId::Sample);
                 }
                 ButtonPressed(id) if id == Id::BrushEraseCheck.into() => {
-                    c_manager.tools.brush.erase_mode = !c_manager.tools.brush.erase_mode;
+                    c_manager
+                        .tools
+                        .brush
+                        .erase_mode
+                        .set(!c_manager.tools.brush.erase_mode.get());
                 }
                 Drag(id, delta) if id == Id::ToolSizeDrag.into() && delta.x != 0.0 => {
                     const CONST: f32 = 0.5;
@@ -142,6 +150,13 @@ impl ActionPump {
                         * (delta.x * CONST * ui.ui_scale.get()).abs().ceil() as i32;
                     let alfa = &mut c_manager.tools.brush.alfa;
                     alfa.set((alfa.get() + val).clamp(1, 100));
+                }
+                Drag(id, delta) if id == Id::BrushFollowDrag.into() && delta.x != 0.0 => {
+                    const CONST: f32 = 0.5;
+                    let val = if delta.x > 0.0 { 1 } else { -1 }
+                        * (delta.x * CONST * ui.ui_scale.get()).abs().ceil() as i32;
+                    let delay = &mut c_manager.tools.brush.follow_delay;
+                    delay.set((delay.get() + val).clamp(0, 100));
                 }
                 DragEnd(id) if id == Id::BrushHardnessDrag.into() => {
                     c_manager.tools.brush.generate_circle_alfa_mask(t_manager);
@@ -272,6 +287,28 @@ impl ActionPump {
                     for id in callbacks.get(&BrushAlfaTxt).unwrap_or(&vec![]) {
                         Txt::update_text(
                             format!("{}", alfa),
+                            *id,
+                            ui_map,
+                            t_manager,
+                            ui.ui_scale.get(),
+                        );
+                    }
+                }
+                BrushFollowObserve(delay) => {
+                    for id in callbacks.get(&BrushFollowTxt).unwrap_or(&vec![]) {
+                        Txt::update_text(
+                            format!("{}", delay),
+                            *id,
+                            ui_map,
+                            t_manager,
+                            ui.ui_scale.get(),
+                        );
+                    }
+                }
+                BrushEraseObserve(erase) => {
+                    for id in callbacks.get(&BrushEraseTxt).unwrap_or(&vec![]) {
+                        Txt::update_text(
+                            (if erase { "*" } else { " " }).to_string(),
                             *id,
                             ui_map,
                             t_manager,

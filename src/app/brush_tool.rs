@@ -6,6 +6,7 @@ use crate::{
         canvas_manager::*, coords::*, input_state::*, observed::Observed,
         texture_data::TextureData, texture_manager::*, texture_vec::TexId16,
     },
+    d, dl,
 };
 use sdl2::{
     gfx::primitives::DrawRenderer,
@@ -34,7 +35,8 @@ pub struct Brush {
     pub draw_density: Observed<i32>,
 
     last_stroke_at: XY,
-    pub erase_mode: bool,
+    pub follow_delay: Observed<i32>,
+    pub erase_mode: Observed<bool>,
 
     // for circle mask
     mask_id: TexId16,
@@ -86,19 +88,35 @@ impl Brush {
 
         let mut s = Self {
             buffer_id,
-            erase_mode: false,
             alfa_mask_id,
             mask_id,
             last_stroke_at: XY::new(0, 0),
-            sub_brush_diameter: Observed::new(6.0, Box::new(Action::ToolSizeObserve)),
+            sub_brush_diameter: Observed::new(20.0, Box::new(Action::ToolSizeObserve)),
             alfa_hardness: Observed::new(1, Box::new(Action::BrushHardnessObserve)),
             draw_density: Observed::new(5, Box::new(Action::BrushDensityObserve)),
-            alfa: Observed::new(100, Box::new(Action::BrushAlfaObserve)),
+            alfa: Observed::new(50, Box::new(Action::BrushAlfaObserve)),
+            follow_delay: Observed::new(66, Box::new(Action::BrushFollowObserve)),
+            erase_mode: Observed::new(false, Box::new(Action::BrushEraseObserve)),
         };
         s.generate_circle_mask(t_manager);
         s.generate_circle_alfa_mask(t_manager);
         s.update_buffer(t_manager);
         s
+    }
+    fn stroke_at_lerped(&mut self, pointer_pos: XY) -> XY {
+        let delay = (100.1 - (self.follow_delay.get() as f32) / 1.5) / 100.1;
+        let mut x_lerp = (pointer_pos.x - self.last_stroke_at.x) as f32 * delay;
+        if x_lerp as i32 == 0 {
+            x_lerp = x_lerp.signum()
+        }
+        let mut y_lerp = (pointer_pos.y - self.last_stroke_at.y) as f32 * delay;
+        if y_lerp as i32 == 0 {
+            y_lerp = y_lerp.signum()
+        }
+        XY::new(
+            self.last_stroke_at.x + x_lerp as i32,
+            self.last_stroke_at.y + y_lerp as i32,
+        )
     }
     pub fn brush_diameter(&self) -> i32 {
         self.sub_brush_diameter.get().floor() as i32
@@ -270,7 +288,7 @@ impl Brush {
         let radius = self.brush_diameter() / 2;
 
         if input.left() == Pressed {
-            let step = data.history.add_step(self.erase_mode);
+            let step = data.history.add_step(self.erase_mode.get());
             self.last_stroke_at = stroke_at;
             let bound = stroke_at.to_bound().expand_one(radius);
             let texture_unit_vec = step.get_textures(bound, data.transform, t_manager);
@@ -285,6 +303,9 @@ impl Brush {
             }
             return;
         }
+
+        let stroke_at = self.stroke_at_lerped(stroke_at);
+
         let step = if let Some(step) = data.history.try_get_target_step() {
             step
         } else {
@@ -294,7 +315,6 @@ impl Brush {
         if input.delta.x == 0 && input.delta.y == 0 {
             return;
         }
-
         let traveled = stroke_at.distance(self.last_stroke_at);
 
         let gap_f = f32::max((radius * self.draw_density.get()) as f32 / 100.0, 1.0);
@@ -340,7 +360,6 @@ impl Brush {
                 strokes.clear();
             }
         }
-        // if time.elapsed().as_nanos() > 10 {}
         self.last_stroke_at = new_last_stroke;
     }
     /// * `buffer_at`: distance from unit origin to buffer onigin
@@ -371,7 +390,7 @@ impl Brush {
         let src = XYWH::new(-min(buffer_at.x, 0), -min(buffer_at.y, 0), dst.w, dst.h);
 
         buffer.set_alpha_mod((255 * self.alfa.get() / 100) as u8);
-        if self.erase_mode {
+        if self.erase_mode.get() {
             buffer.set_color_mod(255, 255, 255);
         } else {
             buffer.set_color_mod(color.r, color.g, color.b);

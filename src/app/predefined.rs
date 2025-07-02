@@ -73,9 +73,20 @@ markup! {{
                         },
                         BrushAlfaTxt:Txt,
                     },
+                    BrushFollow:Div {
+                        BrushFollowBlock:Div {
+                            BrushFollowNumBlock:Div {
+                                BrushFollowNumTxt:Txt,
+                            },
+                            BrushFollowDrag:Drag,
+                        },
+                        BrushFollowTxt:Txt,
+                    },
                     BrushErase:Div {
                         BrushEraseBlock:Div {
-                            BrushEraseCheck:Button,
+                            BrushEraseCheck:Button {
+                                BrushEraseCheckTxt:Txt,
+                            },
                         },
                         BrushEraseTxt:Txt,
                     },

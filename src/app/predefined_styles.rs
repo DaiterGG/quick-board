@@ -139,7 +139,7 @@ impl PredefinedStyles {
 
             BrushSizeTxt: A [A::absolute(XY::new(100, 40), XY::new(95, 50), Size::new(JustPixels, -1, PercentOfVert, 100))],
             BrushSizeTxt: D [D::idle(Data::transparent())],
-            BrushSizeTxt: Txt [Txt::new("Brush Size".to_string(), 30, vec![Idle])],
+            BrushSizeTxt: Txt [Txt::new("Size".to_string(), 30, vec![Idle])],
 
 
             BrushHardness: A [A::block(Vertical, Start, V::new(Pixels, 44))],
@@ -157,7 +157,7 @@ impl PredefinedStyles {
             BrushHardnessDrag: D [D::idle(Data::new(MainDark).with_tex(IconDragHor)).hovered(Data::new(Sub)).pressed(Data::new(FlashClick))],
             BrushHardnessTxt: A [A::absolute(XY::new(100, 40), XY::new(95, 50), Size::new(JustPixels, -1, PercentOfVert, 100))],
             BrushHardnessTxt: D [D::idle(Data::transparent())],
-            BrushHardnessTxt: Txt [Txt::new("Brush Hardness".to_string(), 30, vec![Idle])],
+            BrushHardnessTxt: Txt [Txt::new("Hardness".to_string(), 30, vec![Idle])],
 
 
             BrushDensity: A [A::block(Vertical, Start, V::new(Pixels, 44))],
@@ -175,7 +175,7 @@ impl PredefinedStyles {
             BrushDensityDrag: D [D::idle(Data::new(MainDark).with_tex(IconDragHor)).hovered(Data::new(Sub)).pressed(Data::new(FlashClick))],
             BrushDensityTxt: A [A::absolute(XY::new(100, 40), XY::new(95, 50), Size::new(JustPixels, -1, PercentOfVert, 100))],
             BrushDensityTxt: D [D::idle(Data::transparent())],
-            BrushDensityTxt: Txt [Txt::new("Brush Density".to_string(), 30, vec![Idle])],
+            BrushDensityTxt: Txt [Txt::new("Density".to_string(), 30, vec![Idle])],
 
 
             BrushAlfa: A [A::block(Vertical, Start, V::new(Pixels, 44))],
@@ -193,7 +193,26 @@ impl PredefinedStyles {
             BrushAlfaDrag: D [D::idle(Data::new(MainDark).with_tex(IconDragHor)).hovered(Data::new(Sub)).pressed(Data::new(FlashClick))],
             BrushAlfaTxt: A [A::absolute(XY::new(100, 40), XY::new(95, 50), Size::new(JustPixels, -1, PercentOfVert, 100))],
             BrushAlfaTxt: D [D::idle(Data::transparent())],
-            BrushAlfaTxt: Txt [Txt::new("Brush Alfa".to_string(), 30, vec![Idle])],
+            BrushAlfaTxt: Txt [Txt::new("Alfa".to_string(), 30, vec![Idle])],
+
+
+
+            BrushFollow: A [A::block(Vertical, Start, V::new(Pixels, 44))],
+            BrushFollowBlock: A [A::block(Horizontal, End, V::new(Percent, 50))],
+
+            BrushFollowNumBlock: A [A::block(Horizontal, Start, V::new(Pixels, 90))],
+            BrushFollowNumBlock: D [D::idle(Data::new(MainDark).border(Border::all_w(BorderDark, (0,1,0,0))))],
+
+            BrushFollowNumTxt: A [A::absolute(XY::new(50, 40), XY::new(50, 50), Size::new(JustPixels, -1, PercentOfVert, 100))],
+            BrushFollowNumTxt: D [D::idle(Data::transparent())],
+            BrushFollowNumTxt: Txt [Txt::new("".to_string(), 30, vec![Idle])],
+            BrushFollowNumTxt: Subscribe [Callback::BrushFollowTxt],
+
+            BrushFollowDrag: A [A::block(Horizontal, Start, V::new(Pixels, 40))],
+            BrushFollowDrag: D [D::idle(Data::new(MainDark).with_tex(IconDragHor)).hovered(Data::new(Sub)).pressed(Data::new(FlashClick))],
+            BrushFollowTxt: A [A::absolute(XY::new(100, 40), XY::new(95, 50), Size::new(JustPixels, -1, PercentOfVert, 100))],
+            BrushFollowTxt: D [D::idle(Data::transparent())],
+            BrushFollowTxt: Txt [Txt::new("Follow Delay".to_string(), 30, vec![Idle])],
 
 
             BrushErase: A [A::block(Vertical, Start, V::new(Pixels, 44))],
@@ -201,9 +220,16 @@ impl PredefinedStyles {
 
             BrushEraseCheck: A [A::absolute(XY::new(0, 50), XY::new(0, 50), Size::new(PercentOfVert, 100, PercentOfVert, 100))],
             BrushEraseCheck: D [D::idle(Data::new(MainDark).border(thin_b)).hovered(Data::new(Sub)).pressed(Data::new(FlashClick))],
+
+            //TODO: checkmark at the center
+            BrushEraseCheckTxt: A [A::block(Horizontal, End, V::new(Percent, 80))],
+            BrushEraseCheckTxt: D [D::idle(Data::transparent())],
+            BrushEraseCheckTxt: Txt [Txt::new("x".to_string(), 50, vec![Idle])],
+            BrushEraseCheckTxt: Subscribe [Callback::BrushEraseTxt],
+
             BrushEraseTxt: A [A::absolute(XY::new(100, 40), XY::new(95, 50), Size::new(JustPixels, -1, PercentOfVert, 100))],
             BrushEraseTxt: D [D::idle(Data::transparent())],
-            BrushEraseTxt: Txt [Txt::new("Brush Erase".to_string(), 30, vec![Idle])],
+            BrushEraseTxt: Txt [Txt::new("Erase".to_string(), 30, vec![Idle])],
 
 
             RightTools: A [A::block(Horizontal, End, V::new(Pixels, 50))],
